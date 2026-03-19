@@ -8,7 +8,6 @@ import com.thanglv.robolangchain.util.Constant;
 import dev.langchain4j.data.document.DefaultDocument;
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.Metadata;
-import dev.langchain4j.data.document.splitter.DocumentSplitters;
 import dev.langchain4j.data.image.Image;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ImageContent;
@@ -53,12 +52,6 @@ import java.util.Optional;
 public class DocumentProcessingServiceImpl implements DocumentProcessingService {
     private final DocumentManagementRepository documentManagementRepository;
     private final EmbeddingStoreIngestor embeddingStoreIngestor;
-
-    // Document Splitter với cấu hình tối ưu: 
-    // - maxSegmentSize: 500 ký tự (đủ nhỏ để tìm kiếm chính xác)
-    // - overlapSize: 100 ký tự (đủ lớn để giữ ngữ cảnh giữa các segment)
-    private static final int MAX_SEGMENT_SIZE = 500;
-    private static final int OVERLAP_SIZE = 100;
 
     @Autowired
     private ChatModel chatModel;
@@ -146,19 +139,9 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
                 metadata.put("Page", page);
                 metadata.put("media", String.join("#", media));
 
-                // Tạo document với text và metadata
+                // Create a document with text and metadata, then ingest it into the embedding store
                 Document doc = new DefaultDocument(textContent.toString(), metadata);
-                
-                // Sử dụng Document Splitter để chia nhỏ nội dung trước khi ingest
-                // Việc này giúp cải thiện chất lượng tìm kiếm bằng cách tạo các segment nhỏ hơn,
-                // dễ dàng khớp với truy vấn cụ thể thay vì toàn bộ trang
-                var splitter = DocumentSplitters.recursive(MAX_SEGMENT_SIZE, OVERLAP_SIZE);
-                List<TextSegment> segments = splitter.split(doc);
-                
-                // Ingest từng segment vào embedding store
-                for (TextSegment segment : segments) {
-                    embeddingStoreIngestor.ingest(segment);
-                }
+                embeddingStoreIngestor.ingest(doc);
             }
         }
         documentManagement.setStatus(Constant.DOCUMENT_STATUS.PROCESSED);
