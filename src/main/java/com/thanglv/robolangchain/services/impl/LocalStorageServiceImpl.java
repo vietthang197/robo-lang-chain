@@ -3,8 +3,8 @@ package com.thanglv.robolangchain.services.impl;
 
 import com.thanglv.robolangchain.dto.request.DocumentUploadRequest;
 import com.thanglv.robolangchain.dto.response.DocumentUploadResponse;
-import com.thanglv.robolangchain.entity.DocumentManagement;
-import com.thanglv.robolangchain.repository.DocumentManagementRepository;
+import com.thanglv.robolangchain.entity.FileManagementDocument;
+import com.thanglv.robolangchain.repository.FileManagementRepository;
 import com.thanglv.robolangchain.services.DocumentStorageService;
 import com.thanglv.robolangchain.util.Constant;
 import lombok.RequiredArgsConstructor;
@@ -18,15 +18,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class DocumentStorageServiceImpl implements DocumentStorageService {
+public class LocalStorageServiceImpl implements DocumentStorageService {
 
-    private final DocumentManagementRepository documentManagementRepository;
+    private final FileManagementRepository fileManagementRepository;
 
     @Value("${nas.path}")
     private String rootDir;
@@ -46,18 +47,20 @@ public class DocumentStorageServiceImpl implements DocumentStorageService {
             Files.copy(is, newFilePath, StandardCopyOption.REPLACE_EXISTING);
         }
 
-        DocumentManagement documentManagement = new DocumentManagement();
-        documentManagement.setId(UUID.randomUUID().toString());
-        documentManagement.setOriginalFileName(request.getFile().getOriginalFilename());
-        documentManagement.setSize(request.getFile().getSize());
-        documentManagement.setPath(newFilePath.toAbsolutePath().toString());
-        documentManagement.setCreatedDate(LocalDateTime.now());
-        documentManagement.setStatus(Constant.DOCUMENT_STATUS.NOT_PROCESS);
+        FileManagementDocument localFile = new FileManagementDocument();
+        localFile.setId(UUID.randomUUID().toString());
+        localFile.setOriginalFileName(request.getFile().getOriginalFilename());
+        localFile.setSize(request.getFile().getSize());
+        localFile.setPath(newFilePath.toAbsolutePath().toString());
+        localFile.setCreatedDate(Instant.now());
+        localFile.setUploadStatus(Constant.UPLOAD_STATUS.SUCCESS);
+        localFile.setIsLocalStorage(Constant.NO);
+        localFile.setRagStatus(Constant.RAG_STATUS.NOT_PROCESS);
 
-        documentManagement = documentManagementRepository.save(documentManagement);
+        localFile = fileManagementRepository.save(localFile);
         DocumentUploadResponse response = new DocumentUploadResponse();
-        response.setDocumentId(documentManagement.getId());
-        response.setPath(documentManagement.getPath());
+        response.setDocumentId(localFile.getId());
+        response.setPath(localFile.getPath());
         return response;
     }
 }

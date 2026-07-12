@@ -1,25 +1,22 @@
 package com.thanglv.robolangchain.services.impl;
 
 import com.thanglv.robolangchain.dto.response.DocumentProcessingResponse;
-import com.thanglv.robolangchain.entity.DocumentManagement;
-import com.thanglv.robolangchain.repository.DocumentManagementRepository;
+import com.thanglv.robolangchain.entity.FileManagementDocument;
+import com.thanglv.robolangchain.repository.FileManagementRepository;
 import com.thanglv.robolangchain.services.DocumentProcessingService;
 import com.thanglv.robolangchain.util.Constant;
 import dev.langchain4j.data.document.DefaultDocument;
 import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.image.Image;
-import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
-import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.response.ChatResponse;
-import dev.langchain4j.model.output.Response;
-import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.store.embedding.EmbeddingStoreIngestor;
 import lombok.RequiredArgsConstructor;
+import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageTree;
@@ -28,9 +25,7 @@ import org.apache.pdfbox.pdmodel.graphics.PDXObject;
 import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import javax.imageio.ImageIO;
@@ -50,7 +45,7 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class DocumentProcessingServiceImpl implements DocumentProcessingService {
-    private final DocumentManagementRepository documentManagementRepository;
+    private final FileManagementRepository fileManagementRepository;
     private final EmbeddingStoreIngestor embeddingStoreIngestor;
 
     @Autowired
@@ -62,12 +57,12 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
     @Override
     public DocumentProcessingResponse process(String fileId) throws Exception {
         long start = System.currentTimeMillis();
-        Optional<DocumentManagement> documentManagementOptional = documentManagementRepository.findById(fileId);
+        Optional<FileManagementDocument> documentManagementOptional = fileManagementRepository.findById(fileId);
         if (documentManagementOptional.isEmpty()) {
             throw new RuntimeException("Document Management Not Found");
         }
-        DocumentManagement documentManagement = documentManagementOptional.get();
-        try (PDDocument document = PDDocument.load(Files.newInputStream(Paths.get(documentManagement.getPath())))) {
+        FileManagementDocument fileManagementDocument = documentManagementOptional.get();
+        try (PDDocument document = Loader.loadPDF(Paths.get(fileManagementDocument.getPath()).toFile())) {
             PDPageTree pdPages = document.getPages();
             PDFTextStripper pdfTextStripper = new PDFTextStripper();
             int index = 0;
@@ -144,8 +139,8 @@ public class DocumentProcessingServiceImpl implements DocumentProcessingService 
                 embeddingStoreIngestor.ingest(doc);
             }
         }
-        documentManagement.setStatus(Constant.DOCUMENT_STATUS.PROCESSED);
-        documentManagementRepository.save(documentManagement);
+        fileManagementDocument.setRagStatus(Constant.RAG_STATUS.PROCESSED);
+        fileManagementRepository.save(fileManagementDocument);
         long end = System.currentTimeMillis();
         DocumentProcessingResponse documentProcessingResponse = new DocumentProcessingResponse();
         documentProcessingResponse.setTime((end - start) + " ms");

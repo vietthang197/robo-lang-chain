@@ -2,8 +2,17 @@ package com.thanglv.robolangchain.util;
 
 public interface Constant {
 
-    enum DOCUMENT_STATUS {
+    enum RAG_STATUS {
         NOT_PROCESS,
         PROCESSED
     }
+
+    enum UPLOAD_STATUS {
+        NOT_UPLOAD,
+        PENDING,
+        SUCCESS,
+        FAILED
+    }
+
+    String NO = "N";
 }
