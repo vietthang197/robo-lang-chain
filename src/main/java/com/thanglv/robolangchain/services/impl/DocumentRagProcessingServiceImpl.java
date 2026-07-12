@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 import java.util.Optional;
 
 @Service
-public class DocumentRagRagProcessingServiceImpl implements DocumentRagProcessingService {
+public class DocumentRagProcessingServiceImpl implements DocumentRagProcessingService {
     @Autowired
     private  FileManagementRepository fileManagementRepository;
 
