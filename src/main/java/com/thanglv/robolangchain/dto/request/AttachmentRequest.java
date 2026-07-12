@@ -10,7 +10,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 public class AttachmentRequest {
-    private String id;
+    private String fileId;
     private String mimeType;
     private Long size;
     private String name;

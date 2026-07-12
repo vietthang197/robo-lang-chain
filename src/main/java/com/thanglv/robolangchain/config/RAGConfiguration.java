@@ -37,8 +37,8 @@ public class RAGConfiguration {
         return EmbeddingStoreContentRetriever.builder()
                 .embeddingStore(embeddingStore)
                 .embeddingModel(embeddingModel)
-                .maxResults(50)
-                .minScore(0.6)
+                .maxResults(100)
+                .minScore(0.50)
                 .build();
     }
 
@@ -46,8 +46,8 @@ public class RAGConfiguration {
     public ReRankingContentAggregator reRankingContentAggregator(ScoringModel scoringModel) {
         return ReRankingContentAggregator.builder()
                 .scoringModel(scoringModel)
-                .minScore(0.5)
-                .maxResults(20)
+                .minScore(0.75)
+                .maxResults(50)
                 .build();
     }
 

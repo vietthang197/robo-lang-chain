@@ -70,6 +70,8 @@ public class LocalFileStorageServiceImpl implements FileStorageService {
         FileUploadResponse response = new FileUploadResponse();
         response.setFileId(localFile.getId());
         response.setPath(localFile.getPath());
+        response.setMimeType(mimeType);
+        response.setOriginalFileName(localFile.getOriginalFileName());
         return response;
     }
 }

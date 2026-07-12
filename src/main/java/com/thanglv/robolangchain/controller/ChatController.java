@@ -33,10 +33,16 @@ public class ChatController {
                        HttpServletRequest servletRequest) throws JsonProcessingException {
 //        String sessionId = servletRequest.getRequestedSessionId();
         if (request.getMeta() != null && CollectionUtils.isNotEmpty(request.getMeta().getAttachments())) {
-            List<FileManagementDocument> files = fileManagementRepository.findAllByIdIn(request.getMeta().getAttachments());
+            List<FileManagementDocument> files = fileManagementRepository.findAllByIdIn(
+                    request.getMeta()
+                            .getAttachments()
+                            .stream()
+                            .map(AttachmentRequest::getFileId)
+                            .collect(Collectors.toList())
+            );
             List<AttachmentRequest> attachmentRequestList = files.stream().map(item -> {
                 AttachmentRequest attmReq = new AttachmentRequest();
-                attmReq.setId(item.getId());
+                attmReq.setFileId(item.getId());
                 attmReq.setMimeType(item.getMimeType());
                 attmReq.setName(item.getOriginalFileName());
                 attmReq.setSize(item.getFileSize());

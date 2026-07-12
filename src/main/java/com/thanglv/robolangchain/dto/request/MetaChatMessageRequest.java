@@ -15,5 +15,5 @@ import java.util.List;
 public class MetaChatMessageRequest {
 
     @Size(max = 5, message = "max attachments size is 5")
-    private List<String> attachments;
+    private List<AttachmentRequest> attachments;
 }
