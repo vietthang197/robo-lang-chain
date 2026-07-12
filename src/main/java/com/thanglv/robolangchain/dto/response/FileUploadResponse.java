@@ -5,7 +5,9 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class DocumentUploadResponse {
-    private String documentId;
+public class FileUploadResponse {
+    private String fileId;
     private String path;
+    private String mimeType;
+    private String originalFileName;
 }

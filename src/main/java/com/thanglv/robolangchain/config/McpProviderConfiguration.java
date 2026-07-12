@@ -8,6 +8,7 @@ import dev.langchain4j.mcp.client.transport.stdio.StdioMcpTransport;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Duration;
 import java.util.List;
 
 @Configuration
@@ -19,20 +20,32 @@ public class McpProviderConfiguration {
                 .command(List.of("C:/Program Files/nodejs/npx.cmd", "mcp-fetch-server"))
                 .logEvents(true)
                 .build();
-        McpClient mcpClientFetch = DefaultMcpClient.builder().transport(mcpFetchTransport).clientName("fetch").build();
+        McpClient mcpClientFetch = DefaultMcpClient.builder()
+                .transport(mcpFetchTransport)
+                .clientName("fetch")
+                .toolExecutionTimeout(Duration.ofMinutes(30))
+                .build();
         McpTransport fileSystemTransport = StdioMcpTransport.builder()
                 .command(List.of("C:/Program Files/nodejs/npx.cmd", "-y",
                         "@modelcontextprotocol/server-filesystem", "D:/"))
                 .logEvents(true)
                 .build();
-        McpClient mcpClientFile = DefaultMcpClient.builder().transport(fileSystemTransport).clientName("filesystem").build();
+        McpClient mcpClientFile = DefaultMcpClient.builder()
+                .transport(fileSystemTransport)
+                .toolExecutionTimeout(Duration.ofMinutes(30))
+                .clientName("filesystem")
+                .build();
 
         McpTransport playwrightTransport = StdioMcpTransport.builder()
                 .command(List.of("C:/Program Files/nodejs/npx.cmd", "-y",
                         "@playwright/mcp@latest"))
                 .logEvents(true)
                 .build();
-        McpClient mcpPlaywright = DefaultMcpClient.builder().transport(playwrightTransport).clientName("playwright").build();
+        McpClient mcpPlaywright = DefaultMcpClient.builder()
+                .transport(playwrightTransport)
+                .clientName("playwright")
+                .toolExecutionTimeout(Duration.ofMinutes(30))
+                .build();
         return McpToolProvider.builder()
                 .mcpClients(mcpClientFetch, mcpClientFile, mcpPlaywright)
                 .build();

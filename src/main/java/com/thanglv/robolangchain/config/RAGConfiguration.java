@@ -42,8 +42,6 @@ public class RAGConfiguration {
                 .build();
     }
 
-
-
     @Bean
     public ReRankingContentAggregator reRankingContentAggregator(ScoringModel scoringModel) {
         return ReRankingContentAggregator.builder()
@@ -63,6 +61,8 @@ public class RAGConfiguration {
                 .contentAggregator(aggregator)
                 .contentInjector(DefaultContentInjector.builder().promptTemplate(
                         PromptTemplate.from("""
+                                {{userMessage}}
+                                
                                 Context information is below.
                                 
                                 ---------------------

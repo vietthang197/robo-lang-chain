@@ -4,6 +4,7 @@ import com.thanglv.robolangchain.util.Constant;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -20,8 +21,8 @@ public class FileManagementDocument {
     @Field(name = "ORIGINAL_FILE_NAME")
     private String originalFileName;
 
-    @Field(name = "SIZE")
-    private Long size;
+    @Field(name = "FILE_SIZE")
+    private Long fileSize;
 
     @Field(name = "PATH")
     private String path;
@@ -32,8 +33,8 @@ public class FileManagementDocument {
     @Field(name = "EXTERNAL_STORAGE_ID")
     private String externalStorageId;
 
-    @Field(name = "IS_LOCAL_STORAGE")
-    private String isLocalStorage;
+    @Field(name = "SOURCE")
+    private String source;
 
     @Field(name = "CREATED_DATE")
     private Instant createdDate;
@@ -43,4 +44,11 @@ public class FileManagementDocument {
 
     @Field(name = "UPLOAD_STATUS")
     private Constant.UPLOAD_STATUS uploadStatus;
+
+    @Field(name = "MIME_TYPE")
+    private String mimeType;
+
+    @Indexed
+    @Field(name = "CREATED_BY")
+    private String createdBy;
 }

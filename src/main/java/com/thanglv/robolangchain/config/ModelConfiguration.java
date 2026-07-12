@@ -34,6 +34,9 @@ public class ModelConfiguration {
     @Value("${ollama.embedding.model.name}")
     private String ollamaEmbeddingModelName;
 
+    @Value("${ollama.vision.model.name}")
+    private String visionModelName;
+
     @Bean(name = "scoringModel")
     public ScoringModel scoringModel() {
         return new OnnxScoringModel(onnxPath, tokenizerPath);
@@ -66,6 +69,25 @@ public class ModelConfiguration {
                 .maxRetries(5)
                 .logRequests(true)
                 .logResponses(true)
+                .timeout(Duration.ofMinutes(30L))
+                .build();
+    }
+
+    @Bean(name = "visionModel")
+    public ChatModel visionModel() {
+        return OllamaChatModel.builder()
+                .baseUrl(ollamaBaseUrl)
+                .modelName(visionModelName)
+                .think(true)
+                .returnThinking(true)
+                .maxRetries(5)
+                .logger(log)
+                .logRequests(true)
+                .logResponses(true)
+                .temperature(1.0d)
+                .topK(20)
+                .minP(0d)
+                .topP(0.8d)
                 .timeout(Duration.ofMinutes(30L))
                 .build();
     }

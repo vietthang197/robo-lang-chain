@@ -15,4 +15,9 @@ public interface Constant {
     }
 
     String NO = "N";
+    String YES = "Y";
+
+    interface FILE_SOURCE {
+        String LOCAL = "LOCAL";
+    }
 }
