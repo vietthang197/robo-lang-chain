@@ -1,0 +1,38 @@
+{
+  "services": [
+    {
+      "uid": "uat:order-svc:service:order-svc", "projectKey": "order-svc", "name": "order-svc",
+      "summary": "Quản lý đơn hàng | tạo và hủy\ndòng hai", "responsibilities": ["Tạo đơn"], "notResponsibleFor": [],
+      "businessTerms": [], "techStack": ["spring-boot"], "ownerTeam": "sales", "domain": "sales", "layer": "core-service",
+      "capabilities": ["Tạo đơn hàng", {"name": "Hủy đơn hàng", "uid": "x"}],
+      "coverage": {"filesTotal": 40, "filesRead": 38}
+    },
+    {
+      "uid": "uat:pay-svc:service:pay-svc", "projectKey": "pay-svc", "name": "pay-svc",
+      "summary": "Thanh toán", "domain": "payment", "layer": "core-service",
+      "capabilities": [], "coverage": null
+    },
+    {
+      "uid": "uat:misc-svc:service:misc-svc", "projectKey": "misc-svc", "name": "misc-svc",
+      "summary": null, "domain": null, "layer": null, "capabilities": null
+    }
+  ],
+  "dependencies": [
+    {"from": "order-svc", "to": "pay-svc", "toUid": "uat:pay-svc:service:pay-svc", "toKind": "service",
+     "protocol": "http", "sync": true, "endpointsUsed": ["POST /pay"], "callCount": 3, "confidence": "high"},
+    {"from": "order-svc", "to": "ext:smtp", "toUid": "ext:smtp", "toKind": "external",
+     "protocol": "channel,http", "sync": false, "endpointsUsed": [], "callCount": 2, "confidence": "medium"},
+    {"from": "pay-svc", "to": "ext:bank", "toUid": "ext:bank", "toKind": "external",
+     "protocol": "http", "sync": true, "endpointsUsed": [], "callCount": 1, "confidence": "low"}
+  ],
+  "dataOwnership": [
+    {"dataStore": "ds:orders", "tech": "postgres", "location": "db1", "owners": ["order-svc"], "readers": ["pay-svc", "misc-svc"]},
+    {"dataStore": "ds:ledger", "tech": "mongo", "location": null, "owners": [], "readers": null}
+  ],
+  "gaps": [
+    {"uid": "gap:1", "kind": "missing-config-value", "askWho": "DevOps", "question": "URL của pay-svc ở uat?", "status": "open", "candidates": null, "attached": "uat:order-svc:service:order-svc"},
+    {"uid": "gap:2", "kind": "low-confidence-description", "askWho": "BA", "question": "misc-svc làm gì?", "attached": "uat:misc-svc:service:misc-svc"},
+    {"uid": "gap:3", "kind": "unknown-external", "askWho": null, "question": "ext:bank là hệ thống nào?", "status": "open", "attached": "ext:bank"},
+    {"uid": "gap:4", "kind": "unresolved-call", "askWho": "Dev", "question": "Đã trả lời", "status": "answered", "attached": "x"}
+  ]
+}
