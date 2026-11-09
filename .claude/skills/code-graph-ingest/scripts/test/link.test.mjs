@@ -344,3 +344,28 @@ test('a host/port that belongs to no scanned project still becomes an ExternalSy
   assert.equal(targets(b, PARTNER)[0].to, 'sys:uat:api.partner.com');
   assert.ok(!b.gaps.some((g) => g.kind === 'unresolved-call'));
 });
+
+test('port near-miss needs a hostless deployment or an unknown call host', () => {
+  // External host on a port that collides with b-service, whose hosts are known and differ.
+  const inp = input();
+  call(inp, PARTNER).resolvedPort = 8081;
+  dep(inp, 'b-service').hosts = ['10.9.9.9'];
+  let b = planLinks(inp, OPTS);
+  assert.equal(targets(b, PARTNER)[0]?.to, 'sys:uat:api.partner.com', JSON.stringify(b.gaps));
+  assert.ok(!node(b, gapUid('unresolved-call', PARTNER)));
+
+  // Same with the fixture hosts (10.1.2.3): the partner host is not among them.
+  const inp2 = input();
+  call(inp2, PARTNER).resolvedPort = 8081;
+  b = planLinks(inp2, OPTS);
+  assert.equal(targets(b, PARTNER)[0]?.to, 'sys:uat:api.partner.com');
+
+  // b-service has no known hosts yet: a call to its port is a near-miss (rule 1 would also have
+  // accepted it port-only), so it is asked about instead of becoming an ExternalSystem.
+  const inp3 = input();
+  call(inp3, PARTNER).resolvedPort = 8081;
+  dep(inp3, 'b-service').hosts = [];
+  b = planLinks(inp3, OPTS);
+  assert.deepEqual(targets(b, PARTNER), []);
+  assert.equal(node(b, gapUid('unresolved-call', PARTNER))?.props.candidates[0].projectKey, 'b-service');
+});

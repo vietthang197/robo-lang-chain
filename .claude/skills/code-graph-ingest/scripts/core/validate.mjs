@@ -103,8 +103,19 @@ function placeholderDefaults(expr) {
   }
   return out;
 }
-// A credential default may only be empty, masked, or another placeholder (judged on its own).
-const safeDefault = (d) => d === '' || d === '***' || /^\$\{.*\}$/s.test(d);
+// True when s is exactly one balanced ${…} placeholder (`${B}x${C}` is not).
+function onePlaceholder(s) {
+  if (!s.startsWith('${')) return false;
+  let depth = 0;
+  for (let j = 1; j < s.length; j++) {
+    if (s[j] === '{') depth++;
+    else if (s[j] === '}' && --depth === 0) return j === s.length - 1;
+  }
+  return false;
+}
+// A credential default may only be empty, masked, or exactly one placeholder; that placeholder's
+// own default is collected and judged separately by placeholderDefaults.
+const safeDefault = (d) => d === '' || d === '***' || onePlaceholder(d);
 
 // Calls visit(path, string) for every string value nested in value.
 function walkStrings(value, path, visit) {

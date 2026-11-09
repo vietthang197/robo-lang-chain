@@ -103,3 +103,18 @@ test('R7-config-default: credential defaults must be masked', () => {
   // Non-credential keys keep their defaults.
   assert.deepEqual(withKey('server.port', { value: '8080', masked: false, placeholderExpr: '${PORT:8080}', defaultValue: '8080' }), []);
 });
+
+test('R7-config-default: a placeholder default must be exactly one balanced placeholder', () => {
+  const b = structuredClone(readJson(fileURLToPath(new URL('./fixtures/valid-min.bundle.json', import.meta.url))));
+  const uid = 'uat:robo-lang-chain:config:spring.datasource.password';
+  const errs = (expr) => {
+    const x = structuredClone(b);
+    x.nodes.push({ type: 'ConfigKey', uid, props: { key: 'spring.datasource.password', value: '***', masked: true, placeholderExpr: expr } });
+    x.edges.push({ type: 'CONTAINS', from: 'uat:robo-lang-chain:service:robo-lang-chain', to: uid, props: {} });
+    return validateBundle(x).errors.filter((e) => e.rule === 'R7-config-default');
+  };
+  assert.equal(errs('${A:${B}s3cret${C}}').length, 1);
+  assert.equal(errs('${A:x${B}}').length, 1);
+  assert.equal(errs('${A:${B}${C}}').length, 1);
+  assert.deepEqual(errs('${A:${B:${C:***}}}'), []);
+});

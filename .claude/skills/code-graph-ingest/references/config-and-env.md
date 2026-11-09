@@ -50,9 +50,9 @@ gapAnswers:                      # nguồn bền vững cho câu trả lời c�
 | `isPlaceholder` | `true` nếu giá trị gốc là `${…}` lấy từ biến môi trường không có trong repo |
 | `placeholderExpr` | biểu thức gốc, ví dụ `${B_URL}` hoặc `${B_URL:http://localhost:8081}`. **Key credential** (mục 4): giữ tên biến, phần default thay bằng `***`: `${DB_PASS:s3cr3tPwd}` → `${DB_PASS:***}` (default rỗng hoặc là placeholder khác thì giữ nguyên, nhưng default lồng bên trong cũng phải che: `${A:${B:***}}`) |
 | `defaultValue` | phần default trong `${KEY:default}`, đã che như `value`. **Key credential:** không ghi, hoặc ghi đúng `***` |
-
-Rule `R7-config-default` (validator): ConfigKey có `key` khớp mẫu key credential mà `placeholderExpr` còn default không phải `***`/rỗng/placeholder, hoặc `defaultValue` khác `***`, thì fail. Lý do: mẫu quét secret chung (`R7-secret`) không nhận ra mật khẩu nằm trong `${DB_PASS:s3cr3tPwd}`.
 | `sourceFile`, `profile` | file chứa giá trị thắng, profile của file đó (`default` cho `application.yml`) |
+
+Rule `R7-config-default` (validator): với ConfigKey có `key` khớp mẫu key credential, mỗi default trong `placeholderExpr` (kể cả default lồng bên trong) phải là `***`, rỗng, hoặc **đúng một** placeholder cân bằng `${…}` (`${A:${B}}` được; `${A:${B}s3cret${C}}` hay `${A:x${B}}` thì fail); `defaultValue` phải bỏ trống hoặc là `***`. Lý do: mẫu quét secret chung (`R7-secret`) không nhận ra mật khẩu nằm trong `${DB_PASS:s3cr3tPwd}`.
 
 ### Giải placeholder
 1. `${other.key}` tham chiếu key khác trong config: thay bằng giá trị đã giải của key đó.

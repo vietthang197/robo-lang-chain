@@ -81,7 +81,8 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
   };
 
   // Projects (other than the caller) whose Deployment the call reaches by host (port compatible),
-  // else by port alone when exactly one Deployment has that port.
+  // else by port alone when exactly one Deployment has that port and either the call host is
+  // unknown or that Deployment has no known hosts yet (mirrors rule 1).
   function nearMiss(call, host, port) {
     const others = [...deployments.keys()].filter((pk) => pk !== call.projectKey).sort(byStr);
     const portOk = (d) => port === null || d.port == null || d.port === port;
@@ -90,8 +91,10 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
       if (byHost.length) return byHost;
       if (others.some((pk) => hostsOf(pk).includes(host))) return [];
     }
+    // A deployment whose known hosts do not include the call host is another machine on the same
+    // port, not a near-miss.
     if (port === null) return [];
-    const byPort = others.filter((pk) => deployments.get(pk).port === port);
+    const byPort = others.filter((pk) => deployments.get(pk).port === port && (host === null || hostsOf(pk).length === 0));
     return byPort.length === 1 ? byPort : [];
   }
 
