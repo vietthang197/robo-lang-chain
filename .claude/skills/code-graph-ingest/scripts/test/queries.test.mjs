@@ -100,3 +100,9 @@ test('CLI unknown env exits 1', () => {
   assert.equal(r.status, 1);
   assert.match(r.stderr, /env/);
 });
+
+test('studio Endpoint -> DataStore chain follows CALLS and TRIGGERS (R21)', () => {
+  const chain = studioQueries('uat').find((q) => q.title === 'Chuỗi Endpoint → DataStore');
+  assert.ok(chain, 'chain query missing');
+  assert.match(chain.cypher, /-\[:CALLS\|TRIGGERS\*0\.\.4\]->/);
+});

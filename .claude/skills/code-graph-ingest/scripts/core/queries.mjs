@@ -184,7 +184,7 @@ export function studioQueries(env) {
     {
       title: 'Chuỗi Endpoint → DataStore',
       cypher: q([
-        'MATCH p = (ep:Endpoint)<-[:EXPOSES]-(o:Operation)-[:CALLS*0..4]->(x:CodeNode)-[:ACCESSES]->(ds:DataStore)',
+        'MATCH p = (ep:Endpoint)<-[:EXPOSES]-(o:Operation)-[:CALLS|TRIGGERS*0..4]->(x:CodeNode)-[:ACCESSES]->(ds:DataStore)',
         `WHERE ep.env = ${e}`,
         'RETURN p LIMIT 200',
       ]),

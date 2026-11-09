@@ -163,3 +163,38 @@ test('t24 rule catches a routine without routine-entry', () => {
   const issues = t24Issues(b);
   assert.deepEqual(issues.map((i) => [i.rule, i.uid]), [['t24-routine-entry', INPUT]]);
 });
+
+test('iris link from spring: rest-template call matches an IRIS endpoint by host/port/path (R21)', () => {
+  const IRIS_EP = 'uat:t24:endpoint:iris:GET /party/customers/{customerId}';
+  const CALL = 'uat:a-service:clientcall:com.example.a.client.IrisClient#getCustomer->rest-template:GET /party/customers/{id}';
+  const OPTS = { env: 'uat', scanId: 'uat-link-20261110T000000Z', gapAnswers: [] };
+  const t = loadT24();
+  t.nodes.push({ type: 'Endpoint', uid: IRIS_EP, props: {
+    kind: 'iris', protocol: 'iris', httpMethod: 'GET', path: '/party/customers/{customerId}',
+    pathRegex: '^/party/customers/[^/]+$', signature: 'GET /party/customers/{customerId}',
+  } });
+  const dep = t.nodes.find((n) => n.type === 'Deployment');
+  dep.props.port = 9089;
+  dep.props.contextPath = '/irf-provider-container/api';
+  dep.props.hosts = ['10.9.0.5'];
+  const a = loadA();
+  a.nodes.push({ type: 'ClientCall', uid: CALL, props: {
+    kind: 'rest-template', clientKind: 'rest-template', httpMethod: 'GET', urlTemplate: '/party/customers/{id}',
+    baseUrlConfigKey: 't24.iris.url', resolvedBaseUrl: 'http://10.9.0.5:9089/irf-provider-container/api',
+    resolvedHost: '10.9.0.5', resolvedPort: 9089, resolvedPath: '/irf-provider-container/api/party/customers/{id}',
+    discoveryName: null, signature: null, topic: null, confidence: 'high',
+  } });
+  const link = planLinks(linkInput([a, t]), OPTS);
+  const tg = link.edges.filter((e) => e.type === 'TARGETS' && e.from === CALL);
+  assert.deepEqual(tg.map((e) => [e.to, e.props.matchedBy, e.props.confidence]), [[IRIS_EP, 'host+path', 'high']], JSON.stringify(link, null, 2));
+  const sdo = link.edges.find((e) => e.type === 'SERVICE_DEPENDS_ON'
+    && e.from === 'uat:a-service:service:a-service' && e.to === 'uat:t24:service:t24');
+  assert.equal(sdo?.props.protocol, 'iris');
+  assert.deepEqual(link.gaps, []);
+  assert.deepEqual(validateBundle(link, { mode: 'link' }).errors, []);
+
+  // Without known hosts the same call still matches by port + path (medium).
+  dep.props.hosts = [];
+  const medium = planLinks(linkInput([a, t]), OPTS).edges.filter((e) => e.type === 'TARGETS' && e.from === CALL);
+  assert.deepEqual(medium.map((e) => [e.to, e.props.matchedBy, e.props.confidence]), [[IRIS_EP, 'host+path', 'medium']]);
+});

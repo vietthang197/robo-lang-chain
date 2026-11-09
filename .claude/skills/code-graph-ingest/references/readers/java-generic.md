@@ -76,7 +76,7 @@ Không tạo Operation cho getter/setter/`equals`/`hashCode`/`toString` tầm th
 
 ## 8. Conformance
 
-- **Fixture:** chưa có fixture riêng. Mapping L3 (Module/Component/Operation/Member, CALLS, OVERRIDES, EXTENDS, USES_TYPE, TAGGED, Library) được kiểm qua `templates/fixtures/spring-boot/expected/*.bundle.json`; phần TAFJ extension sẽ được kiểm cùng fixture `templates/fixtures/t24/` (một routine `CALLJ` sang một class Java).
+- **Fixture:** chưa có fixture riêng. Mapping L3 (Module/Component/Operation/Member, CALLS, OVERRIDES, EXTENDS, USES_TYPE, TAGGED, Library) được kiểm qua `templates/fixtures/spring-boot/expected/*.bundle.json`; fixture `templates/fixtures/t24/` hiện **chưa** có ví dụ `CALLJ` sang class Java; ví dụ TAFJ extension (routine `CALLJ` → Operation Java, `readerProfiles: ["t24", "java-generic"]`) là việc tiếp theo đã lên kế hoạch.
 - **Rule riêng:** chưa có (`profileRules['java-generic']` trả về `[]`); bundle chỉ cần qua các rule chung (`../bundle-format.md` §5): `node <skill>/scripts/validate-bundle.mjs <bundle> --profile java-generic`.
 - **Trích đoạn kỳ vọng** (phần L3, lấy từ fixture b-service):
 ```json

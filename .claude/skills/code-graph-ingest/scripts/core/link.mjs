@@ -15,6 +15,9 @@ const lower = (s) => (typeof s === 'string' && s.trim() !== '' ? s.trim().toLowe
 const byStr = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 const uniqSorted = (xs) => [...new Set(xs.filter((x) => x !== null && x !== undefined))].sort(byStr);
 const isProducer = (kind) => typeof kind === 'string' && kind.endsWith('-producer');
+// Endpoint protocols matched by method + path (ruling R21: IRIS REST endpoints link like http).
+const PATH_PROTOCOLS = new Set(['http', 'iris']);
+const pathProtocol = (p) => PATH_PROTOCOLS.has(p ?? 'http');
 const hash12 = (s) => createHash('sha1').update(s).digest('hex').slice(0, 12);
 
 export const gapUidFor = (env, kind, clientCallUid) => `gap:${env}:system:${kind}:${hash12(clientCallUid)}`;
@@ -52,7 +55,7 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
   for (const a of gapAnswers ?? [])
     if (a?.env === env && typeof a.clientCall === 'string' && a.answer?.targetService) answers.set(a.clientCall, a);
 
-  const httpEndpoints = endpoints.filter((e) => (e.protocol ?? 'http') === 'http')
+  const httpEndpoints = endpoints.filter((e) => pathProtocol(e.protocol))
     .map((e) => ({ ...e, re: endpointRegex(e) })).filter((e) => e.re);
   const hostsOf = (pk) => uniqSorted((deployments.get(pk)?.hosts ?? []).map(lower));
 
@@ -121,7 +124,7 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
     const host = lower(call.resolvedHost) ?? normalizeUrl(call.urlTemplate ?? '').host;
     const port = call.resolvedPort ?? null;
     const http = (pk, ep, matchedBy, confidence) =>
-      ({ targets: [{ uid: ep.uid, pk, matchedBy, confidence, protocol: 'http' }] });
+      ({ targets: [{ uid: ep.uid, pk, matchedBy, confidence, protocol: ep.protocol ?? 'http' }] });
 
     // Rule 1: host membership (and port when both are known) -> high; a deployment with no hosts
     // yet and the same port -> medium. Either way the path must match after the contextPath strip.
@@ -244,7 +247,7 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
       for (const t of r.targets) {
         target(call, t);
         // Fill Deployment.hosts from calls matched for sure (spec §7.2 step 5).
-        if (t.confidence === 'high' && t.protocol === 'http' && t.pk && call.resolvedHost != null
+        if (t.confidence === 'high' && pathProtocol(t.protocol) && t.pk && call.resolvedHost != null
           && lower(call.resolvedHost) !== lower(call.discoveryName)
           && !services.some((s) => lower(s.name) === lower(call.resolvedHost)))
           addHost(t.pk, call.resolvedHost);

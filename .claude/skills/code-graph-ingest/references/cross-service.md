@@ -58,7 +58,7 @@ node <skill>/scripts/bundle-to-cypher.mjs link-bundle.json link-batches --mode l
 - Channel + `SUBSCRIBES`/`PUBLISHES` cho phụ thuộc bất đồng bộ; `ACCESSES {mode}` tới DataStore cho `OWNS_DATA`/`READS_DATA`.
 
 ### 2.1 Thứ tự ưu tiên khi khớp (đúng như `<skill>/scripts/core/link.mjs`)
-Path của lời gọi = `resolvedPath`, không có thì path của `urlTemplate`. Trước khi so với `Endpoint.pathRegex` của project P, cắt `Deployment.contextPath` của P khỏi path (**ruling R16**); path không nằm dưới context-path đó thì P không phải ứng viên. Method phải khớp (Endpoint `ANY`/`*` khớp mọi method).
+Path của lời gọi = `resolvedPath`, không có thì path của `urlTemplate`. Trước khi so với `Endpoint.pathRegex` của project P, cắt `Deployment.contextPath` của P khỏi path (**ruling R16**); path không nằm dưới context-path đó thì P không phải ứng viên. Method phải khớp (Endpoint `ANY`/`*` khớp mọi method). Endpoint được so path là Endpoint `protocol=http` **hoặc** `iris` (IRIS REST của T24, ruling R21); `SERVICE_DEPENDS_ON.protocol` lấy protocol của Endpoint khớp.
 
 0. **`gapAnswers` trong catalog (ruling R17)**: có mục cho ClientCall này thì dựng `TARGETS {matchedBy:'manual', confidence:'high'}` tới Endpoint khớp path của `targetService`, bỏ qua tự động; `answer.host` được thêm vào `Deployment.hosts` của đích. Nếu tự động lẽ ra sinh Gap thì Gap đó được ghi `status=answered`. Câu trả lời không khớp Endpoint nào → Gap `ambiguous-target` báo câu trả lời sai.
 1. **OFS** (`clientKind=ofs`): `signature` = `Endpoint.signature` (protocol ofs) → `matchedBy=ofs-version`, high. Nhiều project → Gap `ambiguous-target`.
