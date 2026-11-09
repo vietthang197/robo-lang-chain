@@ -42,6 +42,9 @@ function nodeRow(node, scan, mode) {
   const where = `${node.type} ${node.uid}`;
   const props = { ...(node.props ?? {}) };
   delete props.uid;
+  // The report reads s.coverage (R19): an ingest Service row inherits the scan's coverage map.
+  if (mode === 'ingest' && node.type === 'Service' && props.coverage === undefined
+    && scan.coverage !== undefined && scan.coverage !== null) props.coverage = scan.coverage;
   const shared = isShared(node.uid) && !isProjectGap(node.uid, scan, mode);
   const patch = mode === 'link' && !shared;
   for (const k of SCAN_KEYS) delete props[k];

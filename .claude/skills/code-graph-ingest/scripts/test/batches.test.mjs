@@ -254,3 +254,22 @@ test('cleanups also remove rows with null scanId, within scope (R13)', () => {
   );
   assert.ok(link.find((p) => p.file === '901-cleanup-derived-gaps').statement.includes("g.uid STARTS WITH 'gap:uat:system:' AND (g.scanId IS NULL OR"));
 });
+
+test('ingest Service row gets scan.coverage when it has none (R19); link mode untouched', () => {
+  const b = fixture();
+  const svcStmt = (plan) => plan.find((p) => p.file.endsWith('-nodes-Service')).statement;
+  const plan = toLoadPlan(b, { mode: 'ingest' });
+  assert.match(svcStmt(plan), /coverage: \{filesTotal: 34, filesRead: 34, skipped: \[\]\}/);
+  assert.match(svcStmt(plan), /n\.coverage = r\.coverage/);
+  const own = fixture();
+  own.nodes.find((n) => n.type === 'Service').props.coverage = { filesTotal: 9, filesRead: 1 };
+  const s2 = svcStmt(toLoadPlan(own, { mode: 'ingest' }));
+  assert.match(s2, /coverage: \{filesTotal: 9, filesRead: 1\}/);
+  assert.ok(!s2.includes('filesTotal: 34'));
+  const none = fixture();
+  delete none.scan.coverage;
+  assert.ok(!svcStmt(toLoadPlan(none, { mode: 'ingest' })).includes('coverage'));
+  // Non-Service nodes never get it.
+  for (const p of plan.filter((x) => /-nodes-/.test(x.file) && !x.file.endsWith('-nodes-Service')))
+    assert.ok(!p.statement.includes('filesTotal'), p.file);
+});

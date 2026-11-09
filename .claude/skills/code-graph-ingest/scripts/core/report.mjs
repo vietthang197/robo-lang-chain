@@ -41,12 +41,39 @@ function servicesSection(services) {
   if (!keyed.length) return [...out, '_Không có service._'];
   return [...out, ...table(['Service', 'Domain', 'Layer', 'Summary', 'Capabilities', 'Độ phủ'],
     keyed.map(({ domain, layer, name, s }) =>
-      [name, domain ?? UNCLASSIFIED, layer, str(s?.summary), capabilityNames(s).join(', '), coverage(s?.coverage)]))];
+      [name, domain ?? UNCLASSIFIED, layer, str(s?.summary), capabilityNames(s).join(', '), coverage(s?.coverage)])),
+  ...keyed.flatMap(({ domain, name, s }) => ['', ...serviceCard(s, name, domain)])];
 }
 
+// Card text sits outside tables: newlines collapse to spaces so a value stays on its line.
+const inline = (v) => str(v).replace(/\s*\r?\n\s*/g, ' ').trim();
+const textList = (v) => uniq(arr(v).map(inline).filter(Boolean));
+
+// Per-service card (spec §7.3 "thẻ service"), in the same domain/layer/name order as the table.
+function serviceCard(s, name, domain) {
+  const out = [`### ${inline(name)} (${inline(s?.projectKey) || '—'})`, ''];
+  if (inline(s?.summary)) out.push(inline(s.summary), '');
+  const meta = [['Domain', domain ?? UNCLASSIFIED]];
+  if (inline(s?.layer)) meta.push(['Layer', inline(s.layer)]);
+  if (inline(s?.ownerTeam)) meta.push(['Owner team', inline(s.ownerTeam)]);
+  if (textList(s?.techStack).length) meta.push(['Tech stack', textList(s.techStack).join(', ')]);
+  meta.push(['Độ phủ', coverage(s?.coverage)]);
+  out.push(...meta.map(([k, v]) => `- **${k}**: ${v}`));
+  const lists = [['Trách nhiệm', textList(s?.responsibilities)], ['Không phụ trách', textList(s?.notResponsibleFor)],
+    ['Capabilities', capabilityNames(s).map(inline)]];
+  for (const [title, items] of lists)
+    if (items.length) out.push('', `**${title}**`, ...items.map((i) => `- ${i}`));
+  return out;
+}
+
+// <protocol>×<callCount>[ · <N> ep][ (async)][?]  (? = low confidence)
 function matrixCell(d) {
-  const base = `${str(d?.protocol) || '?'}×${d?.callCount ?? 0}`;
-  return d?.sync === false ? `${base} (async)` : base;
+  const eps = arr(d?.endpointsUsed).length;
+  let c = `${str(d?.protocol) || '?'}×${d?.callCount ?? 0}`;
+  if (eps) c += ` · ${eps} ep`;
+  if (d?.sync === false) c += ' (async)';
+  if (d?.confidence === 'low') c += '?';
+  return c;
 }
 
 function dependencySection(deps) {
@@ -67,10 +94,10 @@ function dataSection(stores) {
   const out = ['## Dữ liệu', ''];
   if (!stores.length) return [...out, '_Không có DataStore._'];
   const rows = stores
-    .map((d) => [d?.tech ? `${str(d.dataStore)} (${str(d.tech)})` : str(d?.dataStore),
+    .map((d) => [d?.tech ? `${str(d.dataStore)} (${str(d.tech)})` : str(d?.dataStore), str(d?.location),
       uniq(arr(d?.owners).map(str)).join(', '), uniq(arr(d?.readers).map(str)).join(', ')])
-    .sort((a, b) => cmp(a[0], b[0]));
-  return [...out, ...table(['DataStore', 'Owner', 'Readers'], rows)];
+    .sort((a, b) => cmp(a[0], b[0]) || cmp(a[1], b[1]));
+  return [...out, ...table(['DataStore', 'Location', 'Owner', 'Readers'], rows)];
 }
 
 function gapSection(gaps) {

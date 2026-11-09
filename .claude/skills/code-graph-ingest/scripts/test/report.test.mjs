@@ -52,18 +52,49 @@ test('table cells escape pipes and newlines', () => {
   assert.match(s, /Quản lý đơn hàng \\\| tạo và hủy<br>dòng hai/);
 });
 
-test('matrix cell shows protocol×callCount, async marker, blank empty cells', () => {
+test('matrix cell shows protocol×callCount, endpoint count, async and low-confidence markers', () => {
   const s = section(renderReport(data(), null, opts), 'Phụ thuộc');
   assert.equal(line(s, '| Caller'), '| Caller | ext:bank | ext:smtp | pay-svc |');
-  assert.equal(line(s, '| order-svc'), '| order-svc |  | channel,http×2 (async) | http×3 |');
-  assert.equal(line(s, '| pay-svc'), '| pay-svc | http×1 |  |  |');
+  assert.equal(line(s, '| order-svc'), '| order-svc |  | channel,http×2 (async) | http×3 · 1 ep |');
+  assert.equal(line(s, '| pay-svc'), '| pay-svc | http×1? |  |  |');
+  const d = data();
+  Object.assign(d.dependencies[1], { endpointsUsed: ['a', 'b'], confidence: 'low' });
+  const s2 = section(renderReport(d, null, opts), 'Phụ thuộc');
+  assert.equal(line(s2, '| order-svc'), '| order-svc |  | channel,http×2 · 2 ep (async)? | http×3 · 1 ep |');
 });
 
-test('data table lists owners and readers', () => {
+test('data table lists location, owners and readers', () => {
   const s = section(renderReport(data(), null, opts), 'Dữ liệu');
-  assert.match(s, /\| DataStore \| Owner \| Readers \|/);
-  assert.match(s, /\| ds:orders \(postgres\) \| order-svc \| misc-svc, pay-svc \|/);
-  assert.match(s, /\| ds:ledger \(mongo\) \|  \|  \|/);
+  assert.match(s, /\| DataStore \| Location \| Owner \| Readers \|/);
+  assert.match(s, /\| ds:orders \(postgres\) \| db1 \| order-svc \| misc-svc, pay-svc \|/);
+  assert.match(s, /\| ds:ledger \(mongo\) \|  \|  \|  \|/);
+});
+
+test('service cards follow the table, grouped by domain, unclassified last', () => {
+  const s = section(renderReport(data(), null, opts), 'Services theo Domain/Layer');
+  const table = s.indexOf('| Service |');
+  const order = s.indexOf('### order-svc (order-svc)');
+  const pay = s.indexOf('### pay-svc (pay-svc)');
+  const misc = s.indexOf('### misc-svc (misc-svc)');
+  assert.ok(table >= 0 && order > table && pay > table && misc > table);
+  assert.ok(pay < order && order < misc, 'payment, sales, then unclassified');
+  const card = s.slice(order, misc);
+  assert.match(card, /Quản lý đơn hàng \| tạo và hủy dòng hai/);
+  assert.match(card, /\*\*Trách nhiệm\*\*\n- Tạo đơn/);
+  assert.ok(!card.includes('**Không phụ trách**'), 'empty list omitted');
+  assert.match(card, /\*\*Capabilities\*\*\n- Hủy đơn hàng\n- Tạo đơn hàng/);
+  assert.match(card, /\*\*Độ phủ\*\*: 38\/40/);
+  assert.match(card, /\*\*Layer\*\*: core-service/);
+  assert.match(card, /\*\*Owner team\*\*: sales/);
+  assert.match(card, /\*\*Tech stack\*\*: spring-boot/);
+  const miscCard = s.slice(misc);
+  assert.match(miscCard, /\*\*Domain\*\*: \(chưa phân loại\)/);
+  assert.match(miscCard, /\*\*Độ phủ\*\*: —/);
+  assert.ok(!miscCard.includes('**Capabilities**'));
+  const withNot = data();
+  withNot.services[1].notResponsibleFor = ['Lưu thẻ', 'Hoàn tiền'];
+  const s2 = section(renderReport(withNot, null, opts), 'Services theo Domain/Layer');
+  assert.match(s2, /\*\*Không phụ trách\*\*\n- Hoàn tiền\n- Lưu thẻ/);
 });
 
 test('gaps grouped by askWho, only open ones', () => {
