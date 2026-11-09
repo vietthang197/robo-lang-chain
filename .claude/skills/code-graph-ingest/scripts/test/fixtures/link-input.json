@@ -1,0 +1,54 @@
+{
+  "clientCalls": [
+    {
+      "uid": "uat:a-service:clientcall:com.x.BClient#get->feign:GET /items/{id}",
+      "projectKey": "a-service", "clientKind": "feign", "httpMethod": "GET", "urlTemplate": "/items/{id}",
+      "baseUrlConfigKey": "b.base-url", "resolvedHost": "10.1.2.3", "resolvedPort": 8081, "resolvedPath": "/b/items/{id}",
+      "discoveryName": null, "signature": null, "topic": null, "confidence": "high", "manualTargets": []
+    },
+    {
+      "uid": "uat:a-service:clientcall:com.x.BClient#getAgain->feign:GET /items/{id}",
+      "projectKey": "a-service", "clientKind": "feign", "httpMethod": "GET", "urlTemplate": "/items/{id}",
+      "baseUrlConfigKey": "b.base-url", "resolvedHost": "10.1.2.3", "resolvedPort": 8081, "resolvedPath": "/b/items/{id}",
+      "discoveryName": null, "signature": null, "topic": null, "confidence": "high", "manualTargets": []
+    },
+    {
+      "uid": "uat:a-service:clientcall:com.x.T24Client#transfer->ofs:FUNDS.TRANSFER,ACTR",
+      "projectKey": "a-service", "clientKind": "ofs", "httpMethod": null, "urlTemplate": null,
+      "baseUrlConfigKey": null, "resolvedHost": null, "resolvedPort": null, "resolvedPath": null,
+      "discoveryName": null, "signature": "FUNDS.TRANSFER,ACTR", "topic": null, "confidence": "high", "manualTargets": []
+    },
+    {
+      "uid": "uat:a-service:clientcall:com.x.PartnerClient#x->rest-template:GET http://api.partner.com/v1/x",
+      "projectKey": "a-service", "clientKind": "rest-template", "httpMethod": "GET", "urlTemplate": "http://api.partner.com/v1/x",
+      "baseUrlConfigKey": null, "resolvedHost": "api.partner.com", "resolvedPort": 80, "resolvedPath": "/v1/x",
+      "discoveryName": null, "signature": null, "topic": null, "confidence": "high", "manualTargets": []
+    }
+  ],
+  "endpoints": [
+    { "uid": "uat:b-service:endpoint:http:GET /items/{id}", "projectKey": "b-service", "protocol": "http",
+      "httpMethod": "GET", "path": "/items/{id}", "pathRegex": "^/items/[^/]+$", "signature": "GET /items/{id}" },
+    { "uid": "uat:c-service:endpoint:http:GET /items/{id}", "projectKey": "c-service", "protocol": "http",
+      "httpMethod": "GET", "path": "/items/{id}", "pathRegex": "^/items/[^/]+$", "signature": "GET /items/{id}" },
+    { "uid": "uat:t24:endpoint:ofs:FUNDS.TRANSFER,ACTR", "projectKey": "t24", "protocol": "ofs",
+      "httpMethod": null, "path": null, "pathRegex": null, "signature": "FUNDS.TRANSFER,ACTR" }
+  ],
+  "deployments": [
+    { "uid": "uat:a-service:deployment", "projectKey": "a-service", "port": 8080, "contextPath": null, "hosts": [] },
+    { "uid": "uat:b-service:deployment", "projectKey": "b-service", "port": 8081, "contextPath": "/b", "hosts": ["10.1.2.3"] },
+    { "uid": "uat:c-service:deployment", "projectKey": "c-service", "port": 8082, "contextPath": null, "hosts": null }
+  ],
+  "services": [
+    { "uid": "uat:a-service:service:a-service", "projectKey": "a-service", "name": "a-service" },
+    { "uid": "uat:b-service:service:b-service", "projectKey": "b-service", "name": "b-service" },
+    { "uid": "uat:c-service:service:c-service", "projectKey": "c-service", "name": "c-service" },
+    { "uid": "uat:t24:service:t24", "projectKey": "t24", "name": "t24" }
+  ],
+  "accesses": [
+    { "projectKey": "a-service", "dataStore": "ds:uat:mongodb:app.items", "mode": "write" },
+    { "projectKey": "a-service", "dataStore": "ds:uat:mongodb:app.ref", "mode": "read" },
+    { "projectKey": "b-service", "dataStore": "ds:uat:mongodb:app.items", "mode": "read" }
+  ],
+  "externals": [],
+  "channels": []
+}
