@@ -1,0 +1,5 @@
+b-service:
+  url: http://10.1.2.3:8081/b
+spring:
+  datasource:
+    password: secret
