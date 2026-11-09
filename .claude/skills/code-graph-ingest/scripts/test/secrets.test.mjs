@@ -28,6 +28,33 @@ test('masks config values', () => {
     { value: 'http://10.1.2.3:8081/api', masked: false });
 });
 
+test('masks URL credentials containing @ ? / #', () => {
+  for (const raw of ['mongodb://u:p@ss@h:27017/db', 'mongodb://u:p?ss@h/db', 'mongodb://u:p/ss@h:27017/db', 'mongodb://u:p#ss@h:27017/db']) {
+    const { value, masked } = maskConfigValue('spring.data.mongodb.uri', raw);
+    assert.equal(masked, true, raw);
+    assert.ok(value === '***' || /^mongodb:\/\/h(:27017)?\/db$/.test(value), `${raw} -> ${value}`);
+    assert.ok(!/u:|p|ss@/.test(value.replace('mongodb', '')), `${raw} -> ${value}`);
+  }
+  assert.equal(maskConfigValue('spring.data.mongodb.uri', 'mongodb://u:p@ss@h:27017/db').value, 'mongodb://h:27017/db');
+  assert.equal(maskConfigValue('spring.data.mongodb.uri', 'mongodb://u:p/ss@h:27017/db').value, 'mongodb://h:27017/db');
+  assert.equal(maskConfigValue('spring.data.mongodb.uri', 'mongodb://u:p@').value, '***');
+});
+
+test('credential keys are masked even when the value looks like a URL', () => {
+  assert.deepEqual(maskConfigValue('db.password', 'http://h:8080/x'), { value: '***', masked: true });
+  assert.deepEqual(maskConfigValue('db.password', '${DB_PASSWORD}'), { value: '${DB_PASSWORD}', masked: false });
+});
+
+test('assignment pattern ignores prose, masks and placeholders', () => {
+  assert.deepEqual(findSecrets('Kiểm tra token: hợp lệ'), []);
+  assert.deepEqual(findSecrets('spring.datasource.password=***'), []);
+  assert.deepEqual(findSecrets('${API_TOKEN:${X}}'), []);
+  assert.deepEqual(findSecrets('Token: valid for the session'), []);
+  assert.ok(findSecrets('password=abc123').includes('assignment'));
+  assert.ok(findSecrets('token: eyJabc123.def').includes('assignment'));
+  assert.ok(findSecrets('"apikey": "k3y-value"').includes('assignment'));
+});
+
 test('validator fails on secret anywhere', () => {
   const b = structuredClone(readJson(fileURLToPath(new URL('./fixtures/valid-min.bundle.json', import.meta.url))));
   b.nodes[2].props.description += ' ' + JWT;
