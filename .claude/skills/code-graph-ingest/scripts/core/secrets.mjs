@@ -3,13 +3,19 @@
 // `key = value` / `key: value` assignments. The value must look like a credential:
 // printable ASCII only (excludes Vietnamese prose), not a mask (***), not a ${...} placeholder,
 // and either contain a digit/symbol or be long (>= 16 chars) so ordinary words do not trip it.
+// For a ${VAR:default} placeholder only the default is judged; a bare ${VAR} is never a secret.
 const ASSIGNMENT = /(password|secret|token|apikey)["']?\s*[=:]\s*["']?([^\s"',;&]+)/gi;
-const credentialLike = (v) =>
-  v.length >= 3
-  && /^[\x21-\x7E]+$/.test(v)
-  && !/^\*+$/.test(v)
-  && !v.startsWith('${')
-  && (/[\d_\-+/=.!@#$%^*~]/.test(v) || v.length >= 16);
+function credentialLike(v) {
+  if (v.startsWith('${')) {
+    const body = v.slice(2).replace(/\}+$/, '');
+    const colon = body.indexOf(':');
+    return colon >= 0 && credentialLike(body.slice(colon + 1));
+  }
+  return v.length >= 3
+    && /^[\x21-\x7E]+$/.test(v)
+    && !/^\*+$/.test(v)
+    && (/[\d_\-+/=.!@#$%^*~]/.test(v) || v.length >= 16);
+}
 const hasAssignment = (text) => [...text.matchAll(ASSIGNMENT)].some((m) => credentialLike(m[2]));
 
 const SECRET_PATTERNS = [
@@ -31,6 +37,9 @@ const SECRET_KEY = /(password|passwd|secret|token|apikey|api-key|credential|priv
 const CREDENTIAL_KEY = /(password|passwd|secret|token|apikey|api-key|credential|private|key-store)/i;
 const BARE_PLACEHOLDER = /^\$\{[^}:]*\}$/;
 const MASK = '***';
+// host[:port], or a comma-separated list of them (mongodb replica sets); IPv6 in brackets.
+const HOST = String.raw`(?:[\w.-]+|\[[0-9a-f:.]+\])(?::\d{1,5})?`;
+const HOST_PORT = new RegExp(`^${HOST}(?:,${HOST})*$`, 'i');
 
 // URL: keep scheme/host/port/path, drop userinfo, query and fragment. Returns null when value
 // is not a URL, MASK when the host cannot be separated from the credentials.
@@ -38,14 +47,17 @@ function stripUrl(value) {
   const m = /^([a-z][\w+.-]*:\/\/)(\S*)$/i.exec(value);
   if (!m) return null;
   let rest = m[2];
-  // Userinfo runs to the LAST '@' when a ':' precedes it (passwords may contain @ ? / #);
-  // otherwise only an '@' inside the authority (before / ? #) marks userinfo.
-  const lastAt = rest.lastIndexOf('@');
-  if (lastAt >= 0 && rest.slice(0, lastAt).includes(':')) rest = rest.slice(lastAt + 1);
-  else {
-    const authEnd = rest.search(/[/?#]/);
-    const at = rest.slice(0, authEnd < 0 ? rest.length : authEnd).lastIndexOf('@');
-    if (at >= 0) rest = rest.slice(at + 1);
+  const authOf = (s) => s.slice(0, s.search(/[/?#]/) < 0 ? s.length : s.search(/[/?#]/));
+  const auth = authOf(rest);
+  // Userinfo exists only when the plain authority is not already a clean host[:port] list
+  // (so an '@' in the path or query is left alone). Passwords may contain @ ? / #, so the
+  // userinfo then runs to the LAST '@' that is followed by a valid host[:port] authority.
+  if (auth.includes('@') || !HOST_PORT.test(auth)) {
+    let cut = -1;
+    for (let i = rest.indexOf('@'); i >= 0; i = rest.indexOf('@', i + 1))
+      if (HOST_PORT.test(authOf(rest.slice(i + 1)))) cut = i;
+    if (cut < 0 && auth.includes('@')) return MASK;
+    if (cut >= 0) rest = rest.slice(cut + 1);
   }
   const hp = /^([^/?#]*)([^?#]*)/.exec(rest);
   const host = hp[1];

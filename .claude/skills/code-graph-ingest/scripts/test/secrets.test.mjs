@@ -40,6 +40,14 @@ test('masks URL credentials containing @ ? / #', () => {
   assert.equal(maskConfigValue('spring.data.mongodb.uri', 'mongodb://u:p@').value, '***');
 });
 
+test('an @ in the path or query is not userinfo', () => {
+  assert.deepEqual(maskConfigValue('b-service.url', 'http://h:8080/x?email=a@b.com'),
+    { value: 'http://h:8080/x', masked: true });
+  assert.deepEqual(maskConfigValue('b-service.url', 'http://h:8080/users/@me'),
+    { value: 'http://h:8080/users/@me', masked: false });
+  assert.deepEqual(maskConfigValue('repo.url', 'ssh://git@host/repo'), { value: 'ssh://host/repo', masked: true });
+});
+
 test('credential keys are masked even when the value looks like a URL', () => {
   assert.deepEqual(maskConfigValue('db.password', 'http://h:8080/x'), { value: '***', masked: true });
   assert.deepEqual(maskConfigValue('db.password', '${DB_PASSWORD}'), { value: '${DB_PASSWORD}', masked: false });
@@ -49,6 +57,8 @@ test('assignment pattern ignores prose, masks and placeholders', () => {
   assert.deepEqual(findSecrets('Kiểm tra token: hợp lệ'), []);
   assert.deepEqual(findSecrets('spring.datasource.password=***'), []);
   assert.deepEqual(findSecrets('${API_TOKEN:${X}}'), []);
+  assert.deepEqual(findSecrets('password=${DB_PASS}'), []);
+  assert.deepEqual(findSecrets('password=${DB_PASS:hunter22}'), ['assignment']);
   assert.deepEqual(findSecrets('Token: valid for the session'), []);
   assert.ok(findSecrets('password=abc123').includes('assignment'));
   assert.ok(findSecrets('token: eyJabc123.def').includes('assignment'));
