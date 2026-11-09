@@ -198,3 +198,27 @@ test('iris link from spring: rest-template call matches an IRIS endpoint by host
   const medium = planLinks(linkInput([a, t]), OPTS).edges.filter((e) => e.type === 'TARGETS' && e.from === CALL);
   assert.deepEqual(medium.map((e) => [e.to, e.props.matchedBy, e.props.confidence]), [[IRIS_EP, 'host+path', 'medium']]);
 });
+
+test('raw OFS.SOURCE GENERIC.USER does not leak into the bundle', () => {
+  const raw = readFileSync(FIXTURE('t24/records/OFS.SOURCE/BROWSERTC.txt'), 'utf8');
+  const user = /^GENERIC\.USER\s*=\s*(.+)$/m.exec(raw)?.[1]?.trim();
+  assert.equal(user, 'OFSUAT01');
+  assert.ok(!JSON.stringify(loadT24()).includes(user), 'raw OFS user leaked into the bundle');
+});
+
+test('ofs signatures are normalised before matching (R23)', () => {
+  const OPTS = { env: 'uat', scanId: 'uat-link-20261110T000000Z', gapAnswers: [] };
+  const a = loadA();
+  const mk = (uid, signature) => ({ type: 'ClientCall', uid, props: {
+    kind: 'ofs', clientKind: 'ofs', httpMethod: null, urlTemplate: signature, signature, confidence: 'high' } });
+  const FT = 'uat:a-service:clientcall:com.example.a.client.T24Client#transfer->ofs:funds.transfer, actr';
+  const EQ = 'uat:a-service:clientcall:com.example.a.client.T24Client#customers->ofs:enq  enq.cust.list';
+  a.nodes.push(mk(FT, 'funds.transfer, actr'), mk(EQ, 'enq  enq.cust.list'));
+  const link = planLinks(linkInput([a, loadT24()]), OPTS);
+  const to = (from) => link.edges.filter((e) => e.type === 'TARGETS' && e.from === from).map((e) => [e.to, e.props.matchedBy]);
+  assert.deepEqual(to(FT), [[VERSION_EP, 'ofs-version']]);
+  assert.deepEqual(to(EQ), [[ENQ_EP, 'ofs-version']]);
+  // A gapAnswers manual match normalises too.
+  const manual = planLinks(linkInput([a, loadT24()]), { ...OPTS, gapAnswers: [{ env: 'uat', clientCall: FT, answer: { targetService: 't24' }, answeredBy: 'BA' }] });
+  assert.deepEqual(manual.edges.filter((e) => e.type === 'TARGETS' && e.from === FT).map((e) => [e.to, e.props.matchedBy]), [[VERSION_EP, 'manual']]);
+});

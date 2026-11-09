@@ -18,11 +18,18 @@ function credentialLike(v) {
 }
 const hasAssignment = (text) => [...text.matchAll(ASSIGNMENT)].some((m) => credentialLike(m[2]));
 
+// T24 OFS request with a credential segment: <APP>,<VERSION>[/<FUNC>/<PROCESS>…],<user>/<pass>[/<company>],…
+// e.g. FUNDS.TRANSFER,ACTR/I/PROCESS,USER/PASS,… or ENQUIRY.SELECT,,USER/PASS,ENQ.NAME. A bare signature
+// (FUNDS.TRANSFER,ACTR) has no second comma and a masked password (***) is not flagged.
+const OFS_REQUEST = /\b[A-Z][A-Z0-9.]*,[A-Z0-9.]*(?:\/[A-Z0-9.]*)*,([^/,\s"'`]+)\/([^/,\s"'`]+)/g;
+const hasOfsCredential = (text) => [...text.matchAll(OFS_REQUEST)].some((m) => !/^\*+$/.test(m[2]));
+
 const SECRET_PATTERNS = [
   ['url-userinfo', (t) => /\w+:\/\/[^/\s:@]+:[^/\s@]+@/.test(t)],
   ['jwt', (t) => /eyJ[\w-]+\.[\w-]+\.[\w-]+/.test(t)],
   ['pem-private-key', (t) => /-----BEGIN [A-Z ]*PRIVATE KEY-----/.test(t)],
   ['assignment', hasAssignment],
+  ['ofs-credential', hasOfsCredential],
   ['aws-access-key', (t) => /AKIA[0-9A-Z]{16}/.test(t)],
 ];
 

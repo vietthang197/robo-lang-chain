@@ -118,3 +118,17 @@ test('R7-config-default: a placeholder default must be exactly one balanced plac
   assert.equal(errs('${A:${B}${C}}').length, 1);
   assert.deepEqual(errs('${A:${B:${C:***}}}'), []);
 });
+
+test('findSecrets flags an OFS request carrying user/password (ofs-credential)', () => {
+  const hit = (s) => assert.ok(findSecrets(s).includes('ofs-credential'), s);
+  const miss = (s) => assert.ok(!findSecrets(s).includes('ofs-credential'), s);
+  hit('FUNDS.TRANSFER,ACTR/I/PROCESS,INPUTT/123456,,DEBIT.ACCT.NO=1001');
+  hit('FUNDS.TRANSFER,ACTR/I/PROCESS//0,OFSUSER/Pw.2026/VN0010001,FT123');
+  hit('ENQUIRY.SELECT,,OFSUSER/secretPw,ENQ.CUST.LIST,SHORT.NAME:EQ=NGUYEN');
+  hit('String msg = "CUSTOMER,INPUT/I/PROCESS,user1/pass1,";');
+  miss('FUNDS.TRANSFER,ACTR');
+  miss('ENQ ENQ.CUST.LIST');
+  miss('Nhập giao dịch chuyển khoản nội bộ qua OFS (FUNDS.TRANSFER,ACTR/I/…). Input chính: DEBIT.ACCT.NO, DEBIT.AMOUNT.');
+  miss('FUNDS.TRANSFER,ACTR/I/PROCESS,***/***,FT123');
+  miss('http://10.1.2.3:8081/b/items/{id}');
+});

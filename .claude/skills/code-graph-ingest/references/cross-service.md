@@ -21,7 +21,7 @@ Mục tiêu: từ một chỗ gọi ra ngoài trong code, dựng được chuỗ
 | `resolvedHost`, `resolvedPort` | tách từ `resolvedBaseUrl` (hoặc từ URL tuyệt đối); port mặc định 80/443 theo scheme |
 | `resolvedPath` | path của base URL nối với `urlTemplate`: `http://10.1.2.3:8081/b` + `/items/{id}` → `/b/items/{id}` |
 | `discoveryName` | Feign `name`/`value` (`@FeignClient(name="b-service")`), `lb://b-service/...`, tên k8s service (`http://b-service:8080`) |
-| `signature` | OFS `APP,VERSION` (chỉ khi `clientKind=ofs`), ví dụ `FUNDS.TRANSFER,ACTR` |
+| `signature` | OFS (chỉ khi `clientKind=ofs`): `APP,VERSION` hoặc `ENQ <NAME>`, đã chuẩn hoá (viết hoa, bỏ khoảng trắng, trừ đúng một dấu cách sau `ENQ`), ví dụ `FUNDS.TRANSFER,ACTR`, `ENQ ENQ.CUST.LIST`. Với `clientKind=ofs`, `urlTemplate` = `signature`. **Không bao giờ** chép message OFS (`FUNDS.TRANSFER,ACTR/I/PROCESS,<user>/<pass>,…`) vào bất kỳ trường nào: nó chứa credential (rule `R7-secret`, mẫu `ofs-credential`). Chi tiết: `readers/t24.md` §4.2 |
 | `topic` | topic/queue của producer (`kafkaTemplate.send("payment.created", …)`) |
 | `confidence` | `high` khi URL lấy thẳng từ annotation/config; `medium` khi URL ghép chuỗi trong code hoặc qua nhiều lớp biến; `low` khi phải đoán |
 
@@ -61,7 +61,7 @@ node <skill>/scripts/bundle-to-cypher.mjs link-bundle.json link-batches --mode l
 Path của lời gọi = `resolvedPath`, không có thì path của `urlTemplate`. Trước khi so với `Endpoint.pathRegex` của project P, cắt `Deployment.contextPath` của P khỏi path (**ruling R16**); path không nằm dưới context-path đó thì P không phải ứng viên. Method phải khớp (Endpoint `ANY`/`*` khớp mọi method). Endpoint được so path là Endpoint `protocol=http` **hoặc** `iris` (IRIS REST của T24, ruling R21); `SERVICE_DEPENDS_ON.protocol` lấy protocol của Endpoint khớp.
 
 0. **`gapAnswers` trong catalog (ruling R17)**: có mục cho ClientCall này thì dựng `TARGETS {matchedBy:'manual', confidence:'high'}` tới Endpoint khớp path của `targetService`, bỏ qua tự động; `answer.host` được thêm vào `Deployment.hosts` của đích. Nếu tự động lẽ ra sinh Gap thì Gap đó được ghi `status=answered`. Câu trả lời không khớp Endpoint nào → Gap `ambiguous-target` báo câu trả lời sai.
-1. **OFS** (`clientKind=ofs`): `signature` = `Endpoint.signature` (protocol ofs) → `matchedBy=ofs-version`, high. Nhiều project → Gap `ambiguous-target`.
+1. **OFS** (`clientKind=ofs`): `signature` = `Endpoint.signature` (protocol ofs), so sau khi chuẩn hoá cả hai phía (viết hoa, bỏ khoảng trắng, `ENQ <NAME>`; ruling R23) → `matchedBy=ofs-version`, high. Nhiều project → Gap `ambiguous-target`.
 2. **Producer có `topic`**: Channel cùng tên (ưu tiên cùng tech) → `matchedBy=topic`, high.
 3. **Host + path**: `resolvedHost` ∈ `Deployment.hosts` của P (và port khớp khi cả hai biết) và path khớp → `matchedBy=host+path`, high. Nhiều P → Gap `ambiguous-target`.
 4. **Discovery name**: `discoveryName` (hoặc host) = `Service.name`/projectKey của P và path khớp đúng 1 P → `matchedBy=host+path`, high.

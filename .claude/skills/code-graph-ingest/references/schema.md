@@ -119,7 +119,7 @@ Tài liệu này là **nguồn chuẩn** cho mọi node, edge, thuộc tính và
 | `resolvedHost`, `resolvedPort` | host/port tách từ base URL (port mặc định 80/443 theo scheme) | `10.1.2.3`, `8081` |
 | `resolvedPath` | path của base URL + `urlTemplate` | `/b/items/{id}` |
 | `discoveryName` | tên service discovery: Feign `name`/`value`, `lb://<name>`, tên k8s service | `b-service` |
-| `signature` | OFS `APP,VERSION` khi `clientKind=ofs` | `FUNDS.TRANSFER,ACTR` |
+| `signature` | OFS (chỉ khi `clientKind=ofs`): `APP,VERSION` hoặc `ENQ <NAME>`, đã chuẩn hoá (viết hoa, bỏ khoảng trắng, trừ đúng một dấu cách sau `ENQ`), ví dụ `FUNDS.TRANSFER,ACTR`, `ENQ ENQ.CUST.LIST`. Với `clientKind=ofs`, `urlTemplate` = `signature`. **Không bao giờ** chép message OFS (`FUNDS.TRANSFER,ACTR/I/PROCESS,<user>/<pass>,…`) vào bất kỳ trường nào: nó chứa credential (rule `R7-secret`, mẫu `ofs-credential`). Chi tiết: `readers/t24.md` §4.2 | `FUNDS.TRANSFER,ACTR`, `ENQ ENQ.CUST.LIST` |
 | `topic` | topic/queue của lời gọi producer (`*-producer`) | `payment.created` |
 
 ### L3 Code

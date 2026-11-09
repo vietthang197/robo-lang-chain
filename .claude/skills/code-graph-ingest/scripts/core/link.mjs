@@ -18,6 +18,13 @@ const isProducer = (kind) => typeof kind === 'string' && kind.endsWith('-produce
 // Endpoint protocols matched by method + path (ruling R21: IRIS REST endpoints link like http).
 const PATH_PROTOCOLS = new Set(['http', 'iris']);
 const pathProtocol = (p) => PATH_PROTOCOLS.has(p ?? 'http');
+// Canonical OFS signature (ruling R23): upper-case, no whitespace, except the single space of 'ENQ <NAME>'.
+export function normOfsSignature(s) {
+  if (typeof s !== 'string' || s.trim() === '') return null;
+  const t = s.trim().toUpperCase();
+  const enq = /^ENQ\s+(.+)$/.exec(t);
+  return enq ? `ENQ ${enq[1].replace(/\s+/g, '')}` : t.replace(/\s+/g, '');
+}
 const hash12 = (s) => createHash('sha1').update(s).digest('hex').slice(0, 12);
 
 export const gapUidFor = (env, kind, clientCallUid) => `gap:${env}:system:${kind}:${hash12(clientCallUid)}`;
@@ -107,8 +114,9 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
     const ofs = call.clientKind === 'ofs';
     if (ofs || call.topic != null) {
       let hits = [];
-      if (ofs && call.signature != null) {
-        hits = endpoints.filter((e) => e.signature != null && e.signature === call.signature && (e.protocol ?? 'ofs') === 'ofs')
+      if (ofs && normOfsSignature(call.signature) !== null) {
+        const sig = normOfsSignature(call.signature);
+        hits = endpoints.filter((e) => normOfsSignature(e.signature) === sig && (e.protocol ?? 'ofs') === 'ofs')
           .map((e) => ({ uid: e.uid, pk: e.projectKey, matchedBy: 'ofs-version', confidence: 'high', protocol: 'ofs' }));
         const pks = uniqSorted(hits.map((h) => h.pk));
         if (pks.length > 1) return { gap: { kind: 'ambiguous-target', candidates: pks.map(candidate) } };
@@ -186,7 +194,8 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
     const pk = a.answer.targetService;
     let ep;
     if (call.clientKind === 'ofs')
-      ep = endpoints.find((e) => e.projectKey === pk && e.signature != null && e.signature === call.signature);
+      ep = endpoints.find((e) => e.projectKey === pk && normOfsSignature(e.signature) !== null
+        && normOfsSignature(e.signature) === normOfsSignature(call.signature));
     else ep = pathMatches(call, pk)[0];
     return ep ? { uid: ep.uid, pk, matchedBy: 'manual', confidence: 'high', protocol: ep.protocol ?? 'http' } : null;
   }
