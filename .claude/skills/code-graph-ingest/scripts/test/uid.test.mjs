@@ -49,6 +49,7 @@ test('checkUid handles shared prefixes, ext and special project types', () => {
   assert.equal(checkUid({ type:'Domain', uid:'domain:payments' }, scan), null);
   assert.equal(checkUid({ type:'Operation', uid:'ext:a.B#c', props: { external: true } }, scan), null);
   assert.match(checkUid({ type:'Operation', uid:'ext:a.B#c' }, scan), /external/);
+  assert.match(checkUid({ type:'Operation', uid:'ext:a.B#c', external: true }, scan), /external/);
   assert.equal(checkUid({ type:'Deployment', uid:'uat:svc:deployment' }, scan), null);
   assert.equal(checkUid({ type:'Service', uid:'uat:svc:service:svc' }, scan), null);
   assert.match(checkUid({ type:'Service', uid:'uat:svc:service:other' }, scan), /Service/);

@@ -53,7 +53,7 @@ export function checkUid(node, scan) {
 
   if (p.scope === 'shared') {
     if (p.group === 'ext' && EXT_ALLOWED.has(type)) {
-      const external = node.external === true || node.props?.external === true;
+      const external = node.props?.external === true;
       return external ? null : `${type} ${uid}: ext: uid requires external:true`;
     }
     const want = SHARED_GROUP[type];

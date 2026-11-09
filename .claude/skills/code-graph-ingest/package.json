@@ -7,7 +7,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "test": "node --test scripts/test/*.test.mjs"
+    "test": "node --test"
   },
   "dependencies": {
     "yaml": "^2.8.1"
