@@ -58,8 +58,40 @@ function springBoot(bundle) {
   return issues;
 }
 
+// references/readers/t24.md §8.
+function t24(bundle) {
+  const issues = [];
+  const { nodes, edges, out } = index(bundle);
+  const byUid = new Map(nodes.map((n) => [n.uid, n]));
+  const ownOps = (c) => out(c.uid, 'CONTAINS').map((e) => byUid.get(e.to)).filter((o) => o?.type === 'Operation');
+  const local = (n) => n.type === 'Component' && n.props?.external !== true;
+
+  // 1. Every VERSION Component has an Operation (CONTAINS) that EXPOSES an Endpoint with protocol 'ofs'.
+  for (const c of nodes) {
+    if (!local(c) || c.props?.kind !== 't24-version') continue;
+    const ofs = ownOps(c).some((o) => out(o.uid, 'EXPOSES').some((e) => byUid.get(e.to)?.props?.protocol === 'ofs'));
+    if (!ofs)
+      issues.push({ rule: 't24-version-endpoint', uid: c.uid, message: "VERSION has no Operation that EXPOSES an Endpoint with protocol 'ofs'" });
+  }
+
+  // 2. Every TRIGGERS edge (VERSION hook, TSA.SERVICE job) points to an Operation present in the bundle.
+  for (const e of edges) {
+    if (e.type !== 'TRIGGERS') continue;
+    if (byUid.get(e.to)?.type !== 'Operation')
+      issues.push({ rule: 't24-triggers-target', uid: e.from, message: `TRIGGERS ${JSON.stringify(e.props?.event ?? null)} -> ${e.to} is not an Operation in the bundle` });
+  }
+
+  // 3. Every routine Component has an Operation of kind 'routine-entry'.
+  for (const c of nodes) {
+    if (!local(c) || c.props?.kind !== 't24-routine') continue;
+    if (!ownOps(c).some((o) => o.props?.kind === 'routine-entry'))
+      issues.push({ rule: 't24-routine-entry', uid: c.uid, message: "routine has no Operation with kind 'routine-entry'" });
+  }
+  return issues;
+}
+
 export const profileRules = {
   'spring-boot': springBoot,
-  t24: (_bundle) => [],
+  t24,
   'java-generic': (_bundle) => [],
 };

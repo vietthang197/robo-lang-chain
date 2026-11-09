@@ -1,0 +1,918 @@
+{
+  "schemaVersion": "1.0",
+  "scan": {
+    "scanId": "uat-t24-20261110T090000Z",
+    "env": "uat",
+    "projectKey": "t24",
+    "repoPath": "templates/fixtures/t24",
+    "branch": "uat",
+    "commitSha": "fixture",
+    "readerProfiles": [
+      "t24"
+    ],
+    "scannedAt": "2026-11-10T09:00:00Z",
+    "coverage": {
+      "filesTotal": 6,
+      "filesRead": 6,
+      "skipped": []
+    }
+  },
+  "nodes": [
+    {
+      "type": "Service",
+      "uid": "uat:t24:service:t24",
+      "props": {
+        "kind": "service",
+        "name": "t24",
+        "qualifiedName": "t24",
+        "language": "jbc",
+        "summary": "T24 (Temenos core banking) ở uat: nhận giao dịch chuyển khoản nội bộ qua OFS VERSION FUNDS.TRANSFER,ACTR và cho tra cứu khách hàng qua ENQUIRY ENQ.CUST.LIST. Routine local FT.LOCAL.INPUT kiểm tra khách hàng ghi nợ trước khi ghi giao dịch.",
+        "description": "Instance T24 ở uat với phần tuỳ biến local cho product FT (chuyển khoản) và ST (khách hàng): một VERSION có INPUT.ROUTINE, hai routine jBC, một ENQUIRY và nguồn OFS BROWSERTC.",
+        "responsibilities": [
+          "Hạch toán chuyển khoản nội bộ qua OFS VERSION FUNDS.TRANSFER,ACTR (APPLICATION FUNDS.TRANSFER)",
+          "Kiểm tra khách hàng ghi nợ tồn tại và không bị hạn chế hạch toán (POSTING.RESTRICT) trước khi nhận giao dịch",
+          "Ghi tên khách hàng ra lệnh (ORDERING.CUST) vào giao dịch chuyển khoản",
+          "Cung cấp tra cứu danh sách khách hàng qua ENQUIRY ENQ.CUST.LIST (APPLICATION CUSTOMER)",
+          "Nhận message OFS từ các kênh tích hợp qua OFS.SOURCE BROWSERTC"
+        ],
+        "notResponsibleFor": [
+          "Không tạo hay sửa thông tin khách hàng trong phần tuỳ biến local (chỉ đọc F.CUSTOMER)",
+          "Không gọi ra hệ thống ngoài trong code đã đọc"
+        ],
+        "businessTerms": [
+          "chuyển khoản nội bộ (internal funds transfer)",
+          "hạch toán (posting)",
+          "khách hàng (customer)",
+          "hạn chế hạch toán (posting restriction)",
+          "FUNDS.TRANSFER",
+          "CUSTOMER"
+        ],
+        "techStack": [
+          "t24",
+          "jbc",
+          "ofs"
+        ],
+        "readerProfiles": [
+          "t24"
+        ],
+        "repoUrl": null,
+        "evidence": [
+          "uat:t24:endpoint:ofs:FUNDS.TRANSFER,ACTR",
+          "uat:t24:endpoint:ofs:ENQ ENQ.CUST.LIST",
+          "uat:t24:operation:FT.LOCAL.INPUT#PROCESS",
+          "ds:uat:t24:F.FUNDS.TRANSFER"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Deployment",
+      "uid": "uat:t24:deployment",
+      "props": {
+        "kind": "deployment",
+        "name": "t24@uat",
+        "port": null,
+        "contextPath": null,
+        "hosts": [],
+        "branch": "uat",
+        "commitSha": "fixture",
+        "profilesActive": []
+      }
+    },
+    {
+      "type": "Environment",
+      "uid": "env:uat",
+      "props": {
+        "kind": "environment",
+        "name": "uat",
+        "database": "CodeGraph"
+      }
+    },
+    {
+      "type": "Module",
+      "uid": "uat:t24:module:FT",
+      "props": {
+        "kind": "t24-product",
+        "nativeType": "PRODUCT",
+        "name": "FT",
+        "qualifiedName": "FT",
+        "language": "jbc",
+        "description": "Product FT (Funds Transfer): chuyển khoản.",
+        "evidence": [
+          "BP/FT.LOCAL.INPUT:1",
+          "records/VERSION/FUNDS.TRANSFER,ACTR.txt:1"
+        ],
+        "confidence": "medium",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Module",
+      "uid": "uat:t24:module:ST",
+      "props": {
+        "kind": "t24-product",
+        "nativeType": "PRODUCT",
+        "name": "ST",
+        "qualifiedName": "ST",
+        "language": "jbc",
+        "description": "Product ST (Static): dữ liệu tĩnh như khách hàng (CUSTOMER).",
+        "evidence": [
+          "records/ENQUIRY/ENQ.CUST.LIST.txt:3"
+        ],
+        "confidence": "medium",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Component",
+      "uid": "uat:t24:component:FT.LOCAL.INPUT",
+      "props": {
+        "kind": "t24-routine",
+        "nativeType": "SUBROUTINE",
+        "stereotype": "t24-routine",
+        "name": "FT.LOCAL.INPUT",
+        "qualifiedName": "FT.LOCAL.INPUT",
+        "language": "jbc",
+        "filePath": "BP/FT.LOCAL.INPUT",
+        "lineStart": 1,
+        "lineEnd": 43,
+        "product": "FT",
+        "ebApi": "FT.LOCAL.INPUT",
+        "inserts": [
+          "I_COMMON",
+          "I_EQUATE",
+          "I_F.FUNDS.TRANSFER",
+          "I_F.CUSTOMER"
+        ],
+        "description": "INPUT.ROUTINE của VERSION FUNDS.TRANSFER,ACTR: đọc khách hàng ghi nợ từ F.CUSTOMER, gọi FT.LOCAL.CHECK để kiểm tra hạn chế hạch toán, rồi ghi tên khách hàng ra lệnh vào giao dịch và ghi F.FUNDS.TRANSFER.",
+        "evidence": [
+          "BP/FT.LOCAL.INPUT:1",
+          "BP/FT.LOCAL.INPUT:28",
+          "BP/FT.LOCAL.INPUT:34",
+          "BP/FT.LOCAL.INPUT:41",
+          "records/VERSION/FUNDS.TRANSFER,ACTR.txt:15",
+          "records/EB.API/FT.LOCAL.INPUT.txt:1"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Operation",
+      "uid": "uat:t24:operation:FT.LOCAL.INPUT#FT.LOCAL.INPUT",
+      "props": {
+        "kind": "routine-entry",
+        "name": "FT.LOCAL.INPUT",
+        "qualifiedName": "FT.LOCAL.INPUT#FT.LOCAL.INPUT",
+        "language": "jbc",
+        "filePath": "BP/FT.LOCAL.INPUT",
+        "lineStart": 1,
+        "lineEnd": 13,
+        "signature": "FT.LOCAL.INPUT",
+        "description": "Điểm vào của routine: chạy GOSUB INITIALISE (mở file) rồi GOSUB PROCESS (kiểm tra và cập nhật giao dịch).",
+        "evidence": [
+          "BP/FT.LOCAL.INPUT:11",
+          "BP/FT.LOCAL.INPUT:12"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Operation",
+      "uid": "uat:t24:operation:FT.LOCAL.INPUT#INITIALISE",
+      "props": {
+        "kind": "paragraph",
+        "name": "INITIALISE",
+        "qualifiedName": "FT.LOCAL.INPUT#INITIALISE",
+        "language": "jbc",
+        "filePath": "BP/FT.LOCAL.INPUT",
+        "lineStart": 16,
+        "lineEnd": 23,
+        "description": "Mở file F.CUSTOMER và F.FUNDS.TRANSFER bằng OPF để các bước sau đọc/ghi.",
+        "evidence": [
+          "BP/FT.LOCAL.INPUT:17",
+          "BP/FT.LOCAL.INPUT:19",
+          "BP/FT.LOCAL.INPUT:20",
+          "BP/FT.LOCAL.INPUT:22"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Operation",
+      "uid": "uat:t24:operation:FT.LOCAL.INPUT#PROCESS",
+      "props": {
+        "kind": "paragraph",
+        "name": "PROCESS",
+        "qualifiedName": "FT.LOCAL.INPUT#PROCESS",
+        "language": "jbc",
+        "filePath": "BP/FT.LOCAL.INPUT",
+        "lineStart": 26,
+        "lineEnd": 42,
+        "description": "Đọc khách hàng ghi nợ (DEBIT.CUSTOMER) từ F.CUSTOMER (không thấy thì báo lỗi EB-CUSTOMER.NOT.FOUND), gọi FT.LOCAL.CHECK (kết quả khác OK thì báo lỗi), ghi SHORT.NAME của khách hàng vào ORDERING.CUST và ghi bản ghi vào F.FUNDS.TRANSFER.",
+        "evidence": [
+          "BP/FT.LOCAL.INPUT:27",
+          "BP/FT.LOCAL.INPUT:28",
+          "BP/FT.LOCAL.INPUT:30",
+          "BP/FT.LOCAL.INPUT:34",
+          "BP/FT.LOCAL.INPUT:40",
+          "BP/FT.LOCAL.INPUT:41"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Component",
+      "uid": "uat:t24:component:FT.LOCAL.CHECK",
+      "props": {
+        "kind": "t24-routine",
+        "nativeType": "SUBROUTINE",
+        "stereotype": "t24-routine",
+        "name": "FT.LOCAL.CHECK",
+        "qualifiedName": "FT.LOCAL.CHECK",
+        "language": "jbc",
+        "filePath": "BP/FT.LOCAL.CHECK",
+        "lineStart": 1,
+        "lineEnd": 15,
+        "product": "FT",
+        "ebApi": null,
+        "inserts": [
+          "I_COMMON",
+          "I_EQUATE",
+          "I_F.CUSTOMER"
+        ],
+        "description": "Routine kiểm tra khách hàng ghi nợ có được chuyển khoản không: có POSTING.RESTRICT thì trả mã lỗi EB-CUSTOMER.POSTING.RESTRICTED, không thì trả OK.",
+        "evidence": [
+          "BP/FT.LOCAL.CHECK:1",
+          "BP/FT.LOCAL.CHECK:11",
+          "BP/FT.LOCAL.CHECK:12"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Operation",
+      "uid": "uat:t24:operation:FT.LOCAL.CHECK#FT.LOCAL.CHECK",
+      "props": {
+        "kind": "routine-entry",
+        "name": "FT.LOCAL.CHECK",
+        "qualifiedName": "FT.LOCAL.CHECK#FT.LOCAL.CHECK",
+        "language": "jbc",
+        "filePath": "BP/FT.LOCAL.CHECK",
+        "lineStart": 1,
+        "lineEnd": 15,
+        "signature": "FT.LOCAL.CHECK(CUS.ID, R.CUSTOMER, CHECK.RESULT)",
+        "description": "Nhận bản ghi khách hàng đã đọc sẵn, trả CHECK.RESULT = OK hoặc mã lỗi khi khách hàng có hạn chế hạch toán. Không đọc/ghi file.",
+        "evidence": [
+          "BP/FT.LOCAL.CHECK:10",
+          "BP/FT.LOCAL.CHECK:11",
+          "BP/FT.LOCAL.CHECK:12"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Component",
+      "uid": "uat:t24:component:VERSION/FUNDS.TRANSFER,ACTR",
+      "props": {
+        "kind": "t24-version",
+        "nativeType": "VERSION",
+        "stereotype": "t24-version",
+        "name": "FUNDS.TRANSFER,ACTR",
+        "qualifiedName": "VERSION/FUNDS.TRANSFER,ACTR",
+        "language": "t24-record",
+        "filePath": "records/VERSION/FUNDS.TRANSFER,ACTR.txt",
+        "lineStart": 1,
+        "product": "FT",
+        "application": "FUNDS.TRANSFER",
+        "version": "ACTR",
+        "noOfAuth": 1,
+        "description": "VERSION nhập chuyển khoản nội bộ AC trên APPLICATION FUNDS.TRANSFER (TRANSACTION.TYPE mặc định AC, 1 cấp duyệt); INPUT.ROUTINE là FT.LOCAL.INPUT.",
+        "evidence": [
+          "records/VERSION/FUNDS.TRANSFER,ACTR.txt:1",
+          "records/VERSION/FUNDS.TRANSFER,ACTR.txt:5",
+          "records/VERSION/FUNDS.TRANSFER,ACTR.txt:13",
+          "records/VERSION/FUNDS.TRANSFER,ACTR.txt:14",
+          "records/VERSION/FUNDS.TRANSFER,ACTR.txt:15"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Operation",
+      "uid": "uat:t24:operation:VERSION/FUNDS.TRANSFER,ACTR#ofs",
+      "props": {
+        "kind": "ofs-entry",
+        "name": "ofs",
+        "qualifiedName": "VERSION/FUNDS.TRANSFER,ACTR#ofs",
+        "language": "t24-record",
+        "filePath": "records/VERSION/FUNDS.TRANSFER,ACTR.txt",
+        "lineStart": 1,
+        "description": "Điểm nhận message OFS qua VERSION FUNDS.TRANSFER,ACTR; khi commit, T24 ghi bản ghi FUNDS.TRANSFER (qua hàng chờ duyệt $NAU).",
+        "evidence": [
+          "records/VERSION/FUNDS.TRANSFER,ACTR.txt:1",
+          "records/VERSION/FUNDS.TRANSFER,ACTR.txt:5"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Component",
+      "uid": "uat:t24:component:ENQUIRY/ENQ.CUST.LIST",
+      "props": {
+        "kind": "t24-enquiry",
+        "nativeType": "ENQUIRY",
+        "stereotype": "t24-enquiry",
+        "name": "ENQ.CUST.LIST",
+        "qualifiedName": "ENQUIRY/ENQ.CUST.LIST",
+        "language": "t24-record",
+        "filePath": "records/ENQUIRY/ENQ.CUST.LIST.txt",
+        "lineStart": 1,
+        "product": "ST",
+        "fileName": "CUSTOMER",
+        "description": "ENQUIRY liệt kê khách hàng từ APPLICATION CUSTOMER, lọc theo SHORT.NAME và SECTOR; trả CUSTOMER.NO, SHORT.NAME, SECTOR.",
+        "evidence": [
+          "records/ENQUIRY/ENQ.CUST.LIST.txt:1",
+          "records/ENQUIRY/ENQ.CUST.LIST.txt:3",
+          "records/ENQUIRY/ENQ.CUST.LIST.txt:4",
+          "records/ENQUIRY/ENQ.CUST.LIST.txt:6"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Operation",
+      "uid": "uat:t24:operation:ENQUIRY/ENQ.CUST.LIST#ofs",
+      "props": {
+        "kind": "ofs-entry",
+        "name": "ofs",
+        "qualifiedName": "ENQUIRY/ENQ.CUST.LIST#ofs",
+        "language": "t24-record",
+        "filePath": "records/ENQUIRY/ENQ.CUST.LIST.txt",
+        "lineStart": 1,
+        "description": "Điểm chạy ENQUIRY ENQ.CUST.LIST (OFS ENQUIRY.SELECT hoặc Browser): đọc F.CUSTOMER theo điều kiện lọc.",
+        "evidence": [
+          "records/ENQUIRY/ENQ.CUST.LIST.txt:3"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Endpoint",
+      "uid": "uat:t24:endpoint:ofs:FUNDS.TRANSFER,ACTR",
+      "props": {
+        "kind": "ofs",
+        "protocol": "ofs",
+        "httpMethod": null,
+        "path": null,
+        "pathRegex": null,
+        "signature": "FUNDS.TRANSFER,ACTR",
+        "name": "FUNDS.TRANSFER,ACTR",
+        "application": "FUNDS.TRANSFER",
+        "version": "ACTR",
+        "filePath": "records/VERSION/FUNDS.TRANSFER,ACTR.txt",
+        "lineStart": 1,
+        "description": "Nhập giao dịch chuyển khoản nội bộ qua OFS (FUNDS.TRANSFER,ACTR/I/…). Input chính: DEBIT.ACCT.NO, DEBIT.CURRENCY, DEBIT.AMOUNT, CREDIT.ACCT.NO, DEBIT.CUSTOMER. Tác dụng: INPUT.ROUTINE FT.LOCAL.INPUT đọc F.CUSTOMER, gọi FT.LOCAL.CHECK, ghi F.FUNDS.TRANSFER. Lỗi: khách hàng không tồn tại (EB-CUSTOMER.NOT.FOUND) hoặc bị hạn chế hạch toán (EB-CUSTOMER.POSTING.RESTRICTED).",
+        "evidence": [
+          "records/VERSION/FUNDS.TRANSFER,ACTR.txt:1",
+          "records/VERSION/FUNDS.TRANSFER,ACTR.txt:7",
+          "records/VERSION/FUNDS.TRANSFER,ACTR.txt:15",
+          "uat:t24:operation:FT.LOCAL.INPUT#FT.LOCAL.INPUT",
+          "uat:t24:operation:FT.LOCAL.INPUT#PROCESS",
+          "uat:t24:operation:FT.LOCAL.CHECK#FT.LOCAL.CHECK"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Endpoint",
+      "uid": "uat:t24:endpoint:ofs:ENQ ENQ.CUST.LIST",
+      "props": {
+        "kind": "ofs",
+        "protocol": "ofs",
+        "httpMethod": null,
+        "path": null,
+        "pathRegex": null,
+        "signature": "ENQ ENQ.CUST.LIST",
+        "name": "ENQ ENQ.CUST.LIST",
+        "enquiry": "ENQ.CUST.LIST",
+        "filePath": "records/ENQUIRY/ENQ.CUST.LIST.txt",
+        "lineStart": 1,
+        "description": "Tra cứu danh sách khách hàng. Input: điều kiện lọc SHORT.NAME, SECTOR. Kết quả: CUSTOMER.NO, SHORT.NAME, SECTOR đọc từ F.CUSTOMER. Không ghi dữ liệu.",
+        "evidence": [
+          "records/ENQUIRY/ENQ.CUST.LIST.txt:3",
+          "records/ENQUIRY/ENQ.CUST.LIST.txt:4",
+          "records/ENQUIRY/ENQ.CUST.LIST.txt:6",
+          "uat:t24:operation:ENQUIRY/ENQ.CUST.LIST#ofs"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Endpoint",
+      "uid": "uat:t24:endpoint:ofs:OFS.SOURCE BROWSERTC",
+      "props": {
+        "kind": "ofs-source",
+        "protocol": "ofs",
+        "httpMethod": null,
+        "path": null,
+        "pathRegex": null,
+        "signature": "OFS.SOURCE BROWSERTC",
+        "name": "OFS.SOURCE BROWSERTC",
+        "ofsSource": "BROWSERTC",
+        "filePath": "records/OFS.SOURCE/BROWSERTC.txt",
+        "lineStart": 1,
+        "description": "Kênh OFS tổng BROWSERTC (SOURCE.TYPE SESSION, đồng bộ): cổng mà TC Server và các kênh tích hợp gửi message OFS vào T24; mọi VERSION/ENQUIRY gọi qua OFS đi qua nguồn này.",
+        "evidence": [
+          "records/OFS.SOURCE/BROWSERTC.txt:1",
+          "records/OFS.SOURCE/BROWSERTC.txt:3",
+          "records/OFS.SOURCE/BROWSERTC.txt:4"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "DataStore",
+      "uid": "ds:uat:t24:F.CUSTOMER",
+      "props": {
+        "kind": "t24-application",
+        "name": "CUSTOMER",
+        "tech": "t24",
+        "location": "F.CUSTOMER",
+        "application": "CUSTOMER",
+        "description": "File F.CUSTOMER của APPLICATION CUSTOMER (thông tin khách hàng).",
+        "evidence": [
+          "BP/FT.LOCAL.INPUT:17",
+          "records/ENQUIRY/ENQ.CUST.LIST.txt:3"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "DataStore",
+      "uid": "ds:uat:t24:F.FUNDS.TRANSFER",
+      "props": {
+        "kind": "t24-application",
+        "name": "FUNDS.TRANSFER",
+        "tech": "t24",
+        "location": "F.FUNDS.TRANSFER",
+        "application": "FUNDS.TRANSFER",
+        "description": "File F.FUNDS.TRANSFER của APPLICATION FUNDS.TRANSFER (giao dịch chuyển khoản).",
+        "evidence": [
+          "BP/FT.LOCAL.INPUT:20",
+          "BP/FT.LOCAL.INPUT:41"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Capability",
+      "uid": "uat:t24:capability:internal-funds-transfer",
+      "props": {
+        "kind": "capability",
+        "name": "Hạch toán chuyển khoản nội bộ",
+        "businessTerms": [
+          "chuyển khoản nội bộ (internal funds transfer)",
+          "hạch toán (posting)",
+          "FUNDS.TRANSFER"
+        ],
+        "description": "Nhận và hạch toán giao dịch chuyển khoản giữa hai tài khoản trong ngân hàng (product FT, APPLICATION FUNDS.TRANSFER) qua OFS VERSION FUNDS.TRANSFER,ACTR, có kiểm tra khách hàng ghi nợ trước khi ghi.",
+        "evidence": [
+          "uat:t24:endpoint:ofs:FUNDS.TRANSFER,ACTR",
+          "ds:uat:t24:F.FUNDS.TRANSFER",
+          "uat:t24:operation:FT.LOCAL.CHECK#FT.LOCAL.CHECK"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Capability",
+      "uid": "uat:t24:capability:customer-lookup",
+      "props": {
+        "kind": "capability",
+        "name": "Tra cứu danh sách khách hàng",
+        "businessTerms": [
+          "khách hàng (customer)",
+          "tra cứu khách hàng (customer lookup)",
+          "CUSTOMER"
+        ],
+        "description": "Cho phép kênh tích hợp tra cứu danh sách khách hàng (product ST, APPLICATION CUSTOMER) theo tên viết tắt và ngành qua ENQUIRY ENQ.CUST.LIST.",
+        "evidence": [
+          "uat:t24:endpoint:ofs:ENQ ENQ.CUST.LIST",
+          "ds:uat:t24:F.CUSTOMER"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "ConfigKey",
+      "uid": "uat:t24:config:OFS.SOURCE/BROWSERTC/SOURCE.TYPE",
+      "props": {
+        "kind": "config",
+        "name": "OFS.SOURCE/BROWSERTC/SOURCE.TYPE",
+        "key": "OFS.SOURCE/BROWSERTC/SOURCE.TYPE",
+        "value": "SESSION",
+        "masked": false,
+        "isPlaceholder": false,
+        "placeholderExpr": null,
+        "defaultValue": null,
+        "sourceFile": "records/OFS.SOURCE/BROWSERTC.txt",
+        "profile": null,
+        "filePath": "records/OFS.SOURCE/BROWSERTC.txt",
+        "lineStart": 3
+      }
+    },
+    {
+      "type": "ConfigKey",
+      "uid": "uat:t24:config:OFS.SOURCE/BROWSERTC/SYN.ASYNC",
+      "props": {
+        "kind": "config",
+        "name": "OFS.SOURCE/BROWSERTC/SYN.ASYNC",
+        "key": "OFS.SOURCE/BROWSERTC/SYN.ASYNC",
+        "value": "SYNC",
+        "masked": false,
+        "isPlaceholder": false,
+        "placeholderExpr": null,
+        "defaultValue": null,
+        "sourceFile": "records/OFS.SOURCE/BROWSERTC.txt",
+        "profile": null,
+        "filePath": "records/OFS.SOURCE/BROWSERTC.txt",
+        "lineStart": 4
+      }
+    },
+    {
+      "type": "ConfigKey",
+      "uid": "uat:t24:config:OFS.SOURCE/BROWSERTC/LOG.FILE.DIR",
+      "props": {
+        "kind": "config",
+        "name": "OFS.SOURCE/BROWSERTC/LOG.FILE.DIR",
+        "key": "OFS.SOURCE/BROWSERTC/LOG.FILE.DIR",
+        "value": "OFS.LOG",
+        "masked": false,
+        "isPlaceholder": false,
+        "placeholderExpr": null,
+        "defaultValue": null,
+        "sourceFile": "records/OFS.SOURCE/BROWSERTC.txt",
+        "profile": null,
+        "filePath": "records/OFS.SOURCE/BROWSERTC.txt",
+        "lineStart": 5
+      }
+    },
+    {
+      "type": "ConfigKey",
+      "uid": "uat:t24:config:OFS.SOURCE/BROWSERTC/LOG.DETAIL.LEVEL",
+      "props": {
+        "kind": "config",
+        "name": "OFS.SOURCE/BROWSERTC/LOG.DETAIL.LEVEL",
+        "key": "OFS.SOURCE/BROWSERTC/LOG.DETAIL.LEVEL",
+        "value": "FULL",
+        "masked": false,
+        "isPlaceholder": false,
+        "placeholderExpr": null,
+        "defaultValue": null,
+        "sourceFile": "records/OFS.SOURCE/BROWSERTC.txt",
+        "profile": null,
+        "filePath": "records/OFS.SOURCE/BROWSERTC.txt",
+        "lineStart": 6
+      }
+    },
+    {
+      "type": "ConfigKey",
+      "uid": "uat:t24:config:OFS.SOURCE/BROWSERTC/MAX.CONNECTIONS",
+      "props": {
+        "kind": "config",
+        "name": "OFS.SOURCE/BROWSERTC/MAX.CONNECTIONS",
+        "key": "OFS.SOURCE/BROWSERTC/MAX.CONNECTIONS",
+        "value": "20",
+        "masked": false,
+        "isPlaceholder": false,
+        "placeholderExpr": null,
+        "defaultValue": null,
+        "sourceFile": "records/OFS.SOURCE/BROWSERTC.txt",
+        "profile": null,
+        "filePath": "records/OFS.SOURCE/BROWSERTC.txt",
+        "lineStart": 7
+      }
+    },
+    {
+      "type": "ConfigKey",
+      "uid": "uat:t24:config:OFS.SOURCE/BROWSERTC/GENERIC.USER",
+      "props": {
+        "kind": "config",
+        "name": "OFS.SOURCE/BROWSERTC/GENERIC.USER",
+        "key": "OFS.SOURCE/BROWSERTC/GENERIC.USER",
+        "value": "***",
+        "masked": true,
+        "isPlaceholder": false,
+        "placeholderExpr": null,
+        "defaultValue": null,
+        "sourceFile": "records/OFS.SOURCE/BROWSERTC.txt",
+        "profile": null,
+        "filePath": "records/OFS.SOURCE/BROWSERTC.txt",
+        "lineStart": 8
+      }
+    },
+    {
+      "type": "ConfigKey",
+      "uid": "uat:t24:config:OFS.SOURCE/BROWSERTC/GENERIC.PASSWORD",
+      "props": {
+        "kind": "config",
+        "name": "OFS.SOURCE/BROWSERTC/GENERIC.PASSWORD",
+        "key": "OFS.SOURCE/BROWSERTC/GENERIC.PASSWORD",
+        "value": "***",
+        "masked": true,
+        "isPlaceholder": false,
+        "placeholderExpr": null,
+        "defaultValue": null,
+        "sourceFile": "records/OFS.SOURCE/BROWSERTC.txt",
+        "profile": null,
+        "filePath": "records/OFS.SOURCE/BROWSERTC.txt",
+        "lineStart": 9
+      }
+    }
+  ],
+  "edges": [
+    {
+      "type": "IN_ENV",
+      "from": "uat:t24:service:t24",
+      "to": "env:uat",
+      "props": {}
+    },
+    {
+      "type": "IN_ENV",
+      "from": "uat:t24:deployment",
+      "to": "env:uat",
+      "props": {}
+    },
+    {
+      "type": "DEPLOYED_AS",
+      "from": "uat:t24:service:t24",
+      "to": "uat:t24:deployment",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:service:t24",
+      "to": "uat:t24:module:FT",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:service:t24",
+      "to": "uat:t24:module:ST",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:module:FT",
+      "to": "uat:t24:component:FT.LOCAL.INPUT",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:component:FT.LOCAL.INPUT",
+      "to": "uat:t24:operation:FT.LOCAL.INPUT#FT.LOCAL.INPUT",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:component:FT.LOCAL.INPUT",
+      "to": "uat:t24:operation:FT.LOCAL.INPUT#INITIALISE",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:component:FT.LOCAL.INPUT",
+      "to": "uat:t24:operation:FT.LOCAL.INPUT#PROCESS",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:module:FT",
+      "to": "uat:t24:component:FT.LOCAL.CHECK",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:component:FT.LOCAL.CHECK",
+      "to": "uat:t24:operation:FT.LOCAL.CHECK#FT.LOCAL.CHECK",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:module:FT",
+      "to": "uat:t24:component:VERSION/FUNDS.TRANSFER,ACTR",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:component:VERSION/FUNDS.TRANSFER,ACTR",
+      "to": "uat:t24:operation:VERSION/FUNDS.TRANSFER,ACTR#ofs",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:module:ST",
+      "to": "uat:t24:component:ENQUIRY/ENQ.CUST.LIST",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:component:ENQUIRY/ENQ.CUST.LIST",
+      "to": "uat:t24:operation:ENQUIRY/ENQ.CUST.LIST#ofs",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:service:t24",
+      "to": "uat:t24:config:OFS.SOURCE/BROWSERTC/SOURCE.TYPE",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:service:t24",
+      "to": "uat:t24:config:OFS.SOURCE/BROWSERTC/SYN.ASYNC",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:service:t24",
+      "to": "uat:t24:config:OFS.SOURCE/BROWSERTC/LOG.FILE.DIR",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:service:t24",
+      "to": "uat:t24:config:OFS.SOURCE/BROWSERTC/LOG.DETAIL.LEVEL",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:service:t24",
+      "to": "uat:t24:config:OFS.SOURCE/BROWSERTC/MAX.CONNECTIONS",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:service:t24",
+      "to": "uat:t24:config:OFS.SOURCE/BROWSERTC/GENERIC.USER",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:t24:service:t24",
+      "to": "uat:t24:config:OFS.SOURCE/BROWSERTC/GENERIC.PASSWORD",
+      "props": {}
+    },
+    {
+      "type": "CALLS",
+      "from": "uat:t24:operation:FT.LOCAL.INPUT#FT.LOCAL.INPUT",
+      "to": "uat:t24:operation:FT.LOCAL.INPUT#INITIALISE",
+      "props": {
+        "dispatch": "gosub",
+        "lines": [
+          11
+        ],
+        "resolved": true
+      }
+    },
+    {
+      "type": "CALLS",
+      "from": "uat:t24:operation:FT.LOCAL.INPUT#FT.LOCAL.INPUT",
+      "to": "uat:t24:operation:FT.LOCAL.INPUT#PROCESS",
+      "props": {
+        "dispatch": "gosub",
+        "lines": [
+          12
+        ],
+        "resolved": true
+      }
+    },
+    {
+      "type": "CALLS",
+      "from": "uat:t24:operation:FT.LOCAL.INPUT#PROCESS",
+      "to": "uat:t24:operation:FT.LOCAL.CHECK#FT.LOCAL.CHECK",
+      "props": {
+        "dispatch": "call",
+        "lines": [
+          34
+        ],
+        "resolved": true
+      }
+    },
+    {
+      "type": "TRIGGERS",
+      "from": "uat:t24:component:VERSION/FUNDS.TRANSFER,ACTR",
+      "to": "uat:t24:operation:FT.LOCAL.INPUT#FT.LOCAL.INPUT",
+      "props": {
+        "event": "INPUT.ROUTINE",
+        "resolvedVia": "EB.API"
+      }
+    },
+    {
+      "type": "ACCESSES",
+      "from": "uat:t24:operation:FT.LOCAL.INPUT#PROCESS",
+      "to": "ds:uat:t24:F.CUSTOMER",
+      "props": {
+        "mode": "read"
+      }
+    },
+    {
+      "type": "ACCESSES",
+      "from": "uat:t24:operation:FT.LOCAL.INPUT#PROCESS",
+      "to": "ds:uat:t24:F.FUNDS.TRANSFER",
+      "props": {
+        "mode": "write"
+      }
+    },
+    {
+      "type": "ACCESSES",
+      "from": "uat:t24:operation:VERSION/FUNDS.TRANSFER,ACTR#ofs",
+      "to": "ds:uat:t24:F.FUNDS.TRANSFER",
+      "props": {
+        "mode": "write"
+      }
+    },
+    {
+      "type": "ACCESSES",
+      "from": "uat:t24:operation:ENQUIRY/ENQ.CUST.LIST#ofs",
+      "to": "ds:uat:t24:F.CUSTOMER",
+      "props": {
+        "mode": "read"
+      }
+    },
+    {
+      "type": "EXPOSES",
+      "from": "uat:t24:operation:VERSION/FUNDS.TRANSFER,ACTR#ofs",
+      "to": "uat:t24:endpoint:ofs:FUNDS.TRANSFER,ACTR",
+      "props": {}
+    },
+    {
+      "type": "EXPOSES",
+      "from": "uat:t24:operation:ENQUIRY/ENQ.CUST.LIST#ofs",
+      "to": "uat:t24:endpoint:ofs:ENQ ENQ.CUST.LIST",
+      "props": {}
+    },
+    {
+      "type": "SERVES",
+      "from": "uat:t24:deployment",
+      "to": "uat:t24:endpoint:ofs:FUNDS.TRANSFER,ACTR",
+      "props": {}
+    },
+    {
+      "type": "SERVES",
+      "from": "uat:t24:deployment",
+      "to": "uat:t24:endpoint:ofs:ENQ ENQ.CUST.LIST",
+      "props": {}
+    },
+    {
+      "type": "SERVES",
+      "from": "uat:t24:deployment",
+      "to": "uat:t24:endpoint:ofs:OFS.SOURCE BROWSERTC",
+      "props": {}
+    },
+    {
+      "type": "PROVIDES_CAPABILITY",
+      "from": "uat:t24:service:t24",
+      "to": "uat:t24:capability:internal-funds-transfer",
+      "props": {}
+    },
+    {
+      "type": "PROVIDES_CAPABILITY",
+      "from": "uat:t24:service:t24",
+      "to": "uat:t24:capability:customer-lookup",
+      "props": {}
+    },
+    {
+      "type": "REALIZED_BY",
+      "from": "uat:t24:capability:internal-funds-transfer",
+      "to": "uat:t24:endpoint:ofs:FUNDS.TRANSFER,ACTR",
+      "props": {}
+    },
+    {
+      "type": "REALIZED_BY",
+      "from": "uat:t24:capability:customer-lookup",
+      "to": "uat:t24:endpoint:ofs:ENQ ENQ.CUST.LIST",
+      "props": {}
+    }
+  ],
+  "gaps": [],
+  "diagnostics": []
+}
