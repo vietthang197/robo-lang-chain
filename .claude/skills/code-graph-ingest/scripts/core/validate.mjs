@@ -100,6 +100,18 @@ export function validateBundle(bundle, options = {}) {
   const { scan } = bundle;
   const link = scan.projectKey === SYSTEM_SCAN;
   const nodes = bundle.nodes.filter((n) => isObj(n) && nonEmpty(n.uid));
+
+  // R1-projectKey: reserved keys. `system` collides with gap:<env>:system:; `__system__` marks a
+  // link bundle, which never carries a Service (that is a project scan) and is loaded in link mode.
+  const pk = scan.projectKey;
+  if (pk === 'system') err('R1-projectKey', 'projectKey "system" is reserved (gap:<env>:system: uids)');
+  if (pk.includes(':')) err('R1-projectKey', `projectKey ${JSON.stringify(pk)} must not contain ":"`);
+  if (link && nodes.some((n) => n.type === 'Service'))
+    err('R1-projectKey', `projectKey ${SYSTEM_SCAN} is reserved for link bundles; this bundle has a Service`);
+  if (options.mode === 'ingest' && link)
+    err('R1-projectKey', `projectKey ${SYSTEM_SCAN} is reserved for link bundles; not loadable in ingest mode`);
+  if (options.mode === 'link' && !link)
+    err('R1-projectKey', `link mode needs projectKey ${SYSTEM_SCAN}, got ${JSON.stringify(pk)}`);
   const edges = bundle.edges.filter((e) => isObj(e) && nonEmpty(e.from) && nonEmpty(e.to));
   const byUid = new Map();
   const ofType = (t) => nodes.filter((n) => n.type === t);

@@ -131,7 +131,7 @@ test('edge rows carry scanId and keep env/derived', () => {
   const stale = plan.find((p) => p.file.endsWith('delete-stale-edges')).statement;
   assert.equal(
     stale,
-    "MATCH (a:CodeNode {env:'uat', projectKey:'robo-lang-chain'})-[e]->() WHERE e.scanId <> 'uat-robo-lang-chain-20261109T101500Z' DELETE e",
+    "MATCH (a:CodeNode {env:'uat', projectKey:'robo-lang-chain'})-[e]->() WHERE e.scanId IS NULL OR e.scanId <> 'uat-robo-lang-chain-20261109T101500Z' DELETE e",
   );
 });
 
@@ -201,10 +201,10 @@ test('link mode', () => {
 
   const cleanup = plan.filter((p) => p.file.startsWith('9') && p.file.includes('cleanup')).map((p) => p.statement);
   assert.ok(cleanup.includes(
-    `MATCH ()-[e]->() WHERE e.derived = true AND e.env = 'uat' AND e.scanId <> '${LINK_SCAN.scanId}' DELETE e`,
+    `MATCH ()-[e]->() WHERE e.derived = true AND e.env = 'uat' AND (e.scanId IS NULL OR e.scanId <> '${LINK_SCAN.scanId}') DELETE e`,
   ));
   assert.ok(cleanup.includes(
-    `MATCH (g:Gap) WHERE g.uid STARTS WITH 'gap:uat:system:' AND g.scanId <> '${LINK_SCAN.scanId}' DETACH DELETE g`,
+    `MATCH (g:Gap) WHERE g.uid STARTS WITH 'gap:uat:system:' AND (g.scanId IS NULL OR g.scanId <> '${LINK_SCAN.scanId}') DETACH DELETE g`,
   ));
 });
 
@@ -218,4 +218,39 @@ test('shared cleanup only touches orphans', () => {
   assert.ok(s.includes('NOT (n)--()'));
   for (const p of ['ext:', 'lib:', 'tag:', 'ds:', 'ch:', 'sys:']) assert.ok(s.includes(`n.uid STARTS WITH '${p}'`), p);
   assert.ok(!toLoadPlan(fixture(), { mode: 'ingest' }).some((p) => p.statement === s));
+});
+
+test('project gaps are scoped like project nodes (R12)', () => {
+  const gap = { type: 'Gap', uid: 'gap:uat:svc:unresolved-call:abc', props: { kind: 'unresolved-call' } };
+  const sysGap = { type: 'Gap', uid: 'gap:uat:system:ambiguous-target:def', props: { kind: 'ambiguous-target' } };
+  const plan = toLoadPlan(bundle([op(1), gap, sysGap]), { mode: 'ingest' });
+  const s = plan.find((p) => p.file.endsWith('nodes-Gap')).statement;
+  const rowOf = (uid) => s.slice(s.indexOf(`{uid: '${uid}'`)).split('}')[0];
+  assert.ok(rowOf(gap.uid).includes("projectKey: 'svc'"));
+  assert.ok(rowOf(gap.uid).includes("env: 'uat'") && rowOf(gap.uid).includes(`scanId: '${SCAN.scanId}'`));
+  assert.ok(!rowOf(sysGap.uid).includes('projectKey'));
+  // 900-cleanup selects by (env, projectKey), which now includes the project gap
+  const cleanup = plan.find((p) => p.file === '900-cleanup').statement;
+  assert.ok(cleanup.startsWith("MATCH (n:CodeNode {env:'uat', projectKey:'svc'})"));
+  assert.equal(plan.find((p) => p.file === '990-count').expectNodes, 2);
+});
+
+test('cleanups also remove rows with null scanId, within scope (R13)', () => {
+  const plan = toLoadPlan(fixture(), { mode: 'ingest' });
+  const sid = "'uat-robo-lang-chain-20261109T101500Z'";
+  assert.equal(
+    plan.find((p) => p.file === '200-delete-stale-edges').statement,
+    `MATCH (a:CodeNode {env:'uat', projectKey:'robo-lang-chain'})-[e]->() WHERE e.scanId IS NULL OR e.scanId <> ${sid} DELETE e`,
+  );
+  assert.equal(
+    plan.find((p) => p.file === '900-cleanup').statement,
+    `MATCH (n:CodeNode {env:'uat', projectKey:'robo-lang-chain'}) WHERE n.scanId IS NULL OR n.scanId <> ${sid} DETACH DELETE n`,
+  );
+  const link = toLoadPlan(linkBundle(), { mode: 'link' });
+  const derived = link.find((p) => p.file === '900-cleanup-derived').statement;
+  assert.equal(
+    derived,
+    `MATCH ()-[e]->() WHERE e.derived = true AND e.env = 'uat' AND (e.scanId IS NULL OR e.scanId <> '${LINK_SCAN.scanId}') DELETE e`,
+  );
+  assert.ok(link.find((p) => p.file === '901-cleanup-derived-gaps').statement.includes("g.uid STARTS WITH 'gap:uat:system:' AND (g.scanId IS NULL OR"));
 });

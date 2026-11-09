@@ -33,7 +33,7 @@ if (!args) {
 
 try {
   const bundle = readJson(args.file);
-  const { errors } = validateBundle(bundle);
+  const { errors } = validateBundle(bundle, { mode: args.mode });
   if (errors.length) {
     for (const i of errors) console.error(`ERROR [${i.rule}]${i.uid ? ` ${i.uid}` : ''}: ${i.message}`);
     throw new Error(`${args.file} has ${errors.length} validation error(s); run validate-bundle first`);

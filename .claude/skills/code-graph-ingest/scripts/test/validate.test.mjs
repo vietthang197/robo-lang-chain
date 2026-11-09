@@ -151,3 +151,33 @@ test('profile rules hook runs selected profiles', () => {
     profileRules['spring-boot'] = saved;
   }
 });
+
+const withProjectKey = (pk) => {
+  const b = JSON.parse(JSON.stringify(load()).replaceAll(':robo-lang-chain:', `:${pk}:`).replaceAll('service:robo-lang-chain', `service:${pk}`));
+  b.scan.projectKey = pk;
+  return b;
+};
+
+test('projectKey "system" is rejected as R1-projectKey', () => {
+  const b = withProjectKey('system');
+  const errs = validateBundle(b).errors.filter((e) => e.rule === 'R1-projectKey');
+  assert.equal(errs.length, 1);
+  assert.match(errs[0].message, /reserved/);
+  assert.deepEqual(validateBundle(withProjectKey('svc')).errors, []);
+});
+
+test('__system__ is rejected unless it is a link bundle', () => {
+  // a project scan (has a Service) cannot use __system__
+  assert.ok(rules(validateBundle(withProjectKey('__system__')).errors).includes('R1-projectKey'));
+  const link = {
+    schemaVersion: '1.0',
+    scan: { scanId: 'uat-system-link-1', env: 'uat', projectKey: '__system__' },
+    nodes: [{ type: 'Deployment', uid: 'uat:b:deployment', props: { hosts: ['10.1.2.3'] } }],
+    edges: [], gaps: [], diagnostics: [],
+  };
+  assert.deepEqual(validateBundle(link).errors, []);
+  assert.deepEqual(validateBundle(link, { mode: 'link' }).errors, []);
+  assert.deepEqual(rules(validateBundle(link, { mode: 'ingest' }).errors), ['R1-projectKey']);
+  assert.deepEqual(rules(validateBundle(load(), { mode: 'link' }).errors), ['R1-projectKey']);
+  assert.deepEqual(validateBundle(load(), { mode: 'ingest' }).errors, []);
+});

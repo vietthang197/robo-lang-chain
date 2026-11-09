@@ -41,3 +41,12 @@ test('schema statements', () => {
   const iIdx = s.findIndex((x) => x.startsWith('CREATE INDEX'));
   assert.ok(iCode < iProp && iProp < iIdx);
 });
+
+test('numbers that need exponent notation throw (R13)', () => {
+  assert.throws(() => toCypherLiteral(1e21), /range/);
+  assert.throws(() => toCypherLiteral(-(2 ** 60)), /range/);
+  assert.throws(() => toCypherLiteral(1e-7), /exponent/);
+  assert.equal(toCypherLiteral(Number.MAX_SAFE_INTEGER), '9007199254740991');
+  assert.equal(toCypherLiteral(0.000123), '0.000123');
+  assert.equal(toCypherLiteral(123456.789), '123456.789');
+});

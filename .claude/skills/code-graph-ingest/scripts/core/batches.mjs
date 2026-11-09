@@ -30,11 +30,19 @@ function setClause(alias, keys) {
   return parts;
 }
 
+// gap:<env>:<projectKey>:… written by an ingest belongs to that project (ruling R12), so it is
+// scoped and cleaned up like project nodes. gap:<env>:system:… stays system-scoped (link).
+function isProjectGap(uid, scan, mode) {
+  if (mode !== 'ingest' || !uid.startsWith('gap:')) return false;
+  const p = parseUid(uid);
+  return p.env === scan.env && p.rest.split(':')[0] === scan.projectKey;
+}
+
 function nodeRow(node, scan, mode) {
   const where = `${node.type} ${node.uid}`;
   const props = { ...(node.props ?? {}) };
   delete props.uid;
-  const shared = isShared(node.uid);
+  const shared = isShared(node.uid) && !isProjectGap(node.uid, scan, mode);
   const patch = mode === 'link' && !shared;
   for (const k of SCAN_KEYS) delete props[k];
   const row = { uid: node.uid, ...props };
@@ -50,7 +58,7 @@ function nodeRow(node, scan, mode) {
   }
   const keys = Object.keys(row).filter((k) => k !== 'uid');
   keys.forEach((k) => checkKey(k, where));
-  return { row, keys, patch };
+  return { row, keys, patch, shared };
 }
 
 function edgeRow(edge, scan) {
@@ -128,9 +136,10 @@ export function toLoadPlan(bundle, { mode = 'ingest' } = {}) {
   for (const node of bundle.nodes ?? []) {
     if (!NODE_LABELS.includes(node.type))
       throw new Error(`node ${node.uid}: type ${node.type} is not a loadable vertex label`);
-    const { row, keys, patch } = nodeRow(node, scan, mode);
+    const { row, keys, patch, shared } = nodeRow(node, scan, mode);
     if (patch && keys.length === 0) continue;
-    if (!patch && (mode === 'link' || !isShared(node.uid))) expectNodes++;
+    // ingest counts rows stamped with projectKey; link counts rows stamped with its scanId.
+    if (!patch && (mode === 'link' || !shared)) expectNodes++;
     const sig = mode === 'link' ? `${node.type}|${patch}|${[...keys].sort().join(',')}` : node.type;
     if (!groups.has(sig)) groups.set(sig, { type: node.type, patch, items: [] });
     groups.get(sig).items.push({ lit: lit(row), keys });
@@ -145,7 +154,7 @@ export function toLoadPlan(bundle, { mode = 'ingest' } = {}) {
     plan.push({
       file: '200-delete-stale-edges',
       language: 'cypher',
-      statement: `MATCH (a:CodeNode {env:${env}, projectKey:${pk}})-[e]->() WHERE e.scanId <> ${sid} DELETE e`,
+      statement: `MATCH (a:CodeNode {env:${env}, projectKey:${pk}})-[e]->() WHERE e.scanId IS NULL OR e.scanId <> ${sid} DELETE e`,
     });
 
   const edgeGroups = new Map();
@@ -165,7 +174,7 @@ export function toLoadPlan(bundle, { mode = 'ingest' } = {}) {
     plan.push({
       file: '900-cleanup',
       language: 'cypher',
-      statement: `MATCH (n:CodeNode {env:${env}, projectKey:${pk}}) WHERE n.scanId <> ${sid} DETACH DELETE n`,
+      statement: `MATCH (n:CodeNode {env:${env}, projectKey:${pk}}) WHERE n.scanId IS NULL OR n.scanId <> ${sid} DETACH DELETE n`,
     });
     plan.push({
       file: '990-count',
@@ -178,12 +187,12 @@ export function toLoadPlan(bundle, { mode = 'ingest' } = {}) {
     plan.push({
       file: '900-cleanup-derived',
       language: 'cypher',
-      statement: `MATCH ()-[e]->() WHERE e.derived = true AND e.env = ${env} AND e.scanId <> ${sid} DELETE e`,
+      statement: `MATCH ()-[e]->() WHERE e.derived = true AND e.env = ${env} AND (e.scanId IS NULL OR e.scanId <> ${sid}) DELETE e`,
     });
     plan.push({
       file: '901-cleanup-derived-gaps',
       language: 'cypher',
-      statement: `MATCH (g:Gap) WHERE g.uid STARTS WITH ${gapPrefix} AND g.scanId <> ${sid} DETACH DELETE g`,
+      statement: `MATCH (g:Gap) WHERE g.uid STARTS WITH ${gapPrefix} AND (g.scanId IS NULL OR g.scanId <> ${sid}) DETACH DELETE g`,
     });
     // Link rows carry no projectKey; count the shared rows this link run stamped.
     plan.push({

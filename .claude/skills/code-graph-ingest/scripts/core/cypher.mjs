@@ -25,8 +25,14 @@ export function toCypherLiteral(value) {
     case 'string':
       return quoteString(value);
     case 'number':
+    {
       if (!Number.isFinite(value)) throw new Error(`non-finite number cannot be stored: ${value}`);
-      return String(value);
+      if (Math.abs(value) > Number.MAX_SAFE_INTEGER) throw new Error(`number out of safe range: ${value}`);
+      const s = String(value);
+      // JS renders very small numbers as 1e-7 etc.; only plain integer/decimal forms are emitted.
+      if (/e/i.test(s)) throw new Error(`number needs exponent notation, not supported: ${s}`);
+      return s;
+    }
     case 'boolean':
       return value ? 'true' : 'false';
     default:
