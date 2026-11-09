@@ -101,8 +101,12 @@ test('CLI unknown env exits 1', () => {
   assert.match(r.stderr, /env/);
 });
 
-test('studio Endpoint -> DataStore chain follows CALLS and TRIGGERS (R21)', () => {
+test('studio Endpoint -> DataStore chain starts from the exposing Operation and its Component (R21, R22)', () => {
   const chain = studioQueries('uat').find((q) => q.title === 'Chuỗi Endpoint → DataStore');
   assert.ok(chain, 'chain query missing');
-  assert.match(chain.cypher, /-\[:CALLS\|TRIGGERS\*0\.\.4\]->/);
+  assert.match(chain.cypher, /\(ep:Endpoint\)<-\[:EXPOSES\]-\(op:Operation\) WHERE ep\.env = 'uat'/);
+  assert.match(chain.cypher, /OPTIONAL MATCH \(c:Component\)-\[:CONTAINS\]->\(op\)/);
+  assert.match(chain.cypher, /\[x IN \[op, c\] WHERE x IS NOT NULL\] AS starts/);
+  assert.match(chain.cypher, /UNWIND starts AS s/);
+  assert.match(chain.cypher, /\(s\)-\[:CALLS\|TRIGGERS\*0\.\.4\]->\(n:CodeNode\)-\[:ACCESSES\]->\(ds:DataStore\)/);
 });

@@ -41,7 +41,7 @@ Các câu Cypher dán vào ArcadeDB Studio (graph view):
 1. Toàn cảnh L1: service và `SERVICE_DEPENDS_ON`.
 2. Theo domain: thay `<domain>` bằng slug (`domain:<slug>`).
 3. Một service từ L1 xuống L2: thay `<projectKey>`; Service → Capability, Deployment → Endpoint.
-4. Chuỗi Endpoint → DataStore: `EXPOSES` ← Operation → `CALLS|TRIGGERS*0..4` (ruling R21: theo cả hook/job `TRIGGERS`) → `ACCESSES` → DataStore. Chuỗi đứt thường do vi phạm quy tắc gọi method kế thừa (`schema.md` §6).
+4. Chuỗi Endpoint → DataStore: `EXPOSES` ← Operation; điểm xuất phát là **cả** Operation đó **và** Component `CONTAINS` nó (ruling R22), rồi `CALLS|TRIGGERS*0..4` (ruling R21) → `ACCESSES` → DataStore. Nhờ vậy hook gắn ở Component (T24 VERSION `-TRIGGERS->` routine) cũng hiện trong chuỗi. Chuỗi đứt thường do vi phạm quy tắc gọi method kế thừa (`schema.md` §6).
 5. Gap đang mở và node gắn Gap.
 
 ## 4. Sau khi review

@@ -184,9 +184,14 @@ export function studioQueries(env) {
     {
       title: 'Chuỗi Endpoint → DataStore',
       cypher: q([
-        'MATCH p = (ep:Endpoint)<-[:EXPOSES]-(o:Operation)-[:CALLS|TRIGGERS*0..4]->(x:CodeNode)-[:ACCESSES]->(ds:DataStore)',
-        `WHERE ep.env = ${e}`,
-        'RETURN p LIMIT 200',
+        // Ruling R22: start from the exposing Operation AND the Component that CONTAINS it, so hooks
+        // triggered from a Component (T24 VERSION -TRIGGERS-> routine) are followed too.
+        `MATCH (ep:Endpoint)<-[:EXPOSES]-(op:Operation) WHERE ep.env = ${e}`,
+        'OPTIONAL MATCH (c:Component)-[:CONTAINS]->(op)',
+        'WITH ep, op, [x IN [op, c] WHERE x IS NOT NULL] AS starts',
+        'UNWIND starts AS s',
+        'MATCH p = (s)-[:CALLS|TRIGGERS*0..4]->(n:CodeNode)-[:ACCESSES]->(ds:DataStore)',
+        'RETURN ep, op, p LIMIT 200',
       ]),
     },
     {
