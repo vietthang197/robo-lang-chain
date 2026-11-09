@@ -318,3 +318,29 @@ test('CLI writes a valid link bundle from input + catalog', () => {
   const bad = spawnSync(process.execPath, [CLI, FIXTURE], { encoding: 'utf8' });
   assert.equal(bad.status, 2);
 });
+
+test('base URL without the target context-path: unresolved-call gap, not an external system (R20)', () => {
+  for (const hosts of [['10.1.2.3'], []]) { // host match, then port-only match
+    const inp = input();
+    inp.endpoints = inp.endpoints.filter((e) => e.uid !== C_EP);
+    for (const uid of [CALL1, CALL2]) call(inp, uid).resolvedPath = '/items/{id}';
+    dep(inp, 'b-service').hosts = hosts;
+    const b = planLinks(inp, OPTS);
+    assert.deepEqual(targets(b, CALL1), [], JSON.stringify(hosts));
+    assert.ok(!b.nodes.some((n) => n.uid.startsWith('sys:uat:10.1.2.3')), JSON.stringify(hosts));
+    assert.ok(!b.edges.some((e) => e.type === 'SERVICE_DEPENDS_ON' && e.to === 'sys:uat:10.1.2.3'));
+    const g = node(b, gapUid('unresolved-call', CALL1));
+    assert.ok(g, JSON.stringify(b.gaps));
+    assert.equal(g.props.askWho, 'Dev');
+    assert.deepEqual(g.props.candidates, [{ projectKey: 'b-service', hosts, port: 8081, contextPath: '/b' }]);
+    assert.match(g.props.question, /GET \/items\/\{id\} từ a-service .*b-service.*context-path \/b/);
+    assert.ok(b.edges.some((e) => e.type === 'HAS_GAP' && e.from === CALL1 && e.to === g.uid));
+    assert.deepEqual(validateBundle(b, { mode: 'link' }).errors, []);
+  }
+});
+
+test('a host/port that belongs to no scanned project still becomes an ExternalSystem', () => {
+  const b = planLinks(input(), OPTS);
+  assert.equal(targets(b, PARTNER)[0].to, 'sys:uat:api.partner.com');
+  assert.ok(!b.gaps.some((g) => g.kind === 'unresolved-call'));
+});

@@ -32,9 +32,9 @@ export function findSecrets(text) {
   return SECRET_PATTERNS.filter(([, match]) => match(text)).map(([name]) => name);
 }
 
-const SECRET_KEY = /(password|passwd|secret|token|apikey|api-key|credential|private|key-store|uri|url)/i;
+export const SECRET_KEY = /(password|passwd|secret|token|apikey|api-key|credential|private|key-store|jaas|uri|url)/i;
 // Keys whose value is a credential in itself (not merely a locator such as a uri/url).
-const CREDENTIAL_KEY = /(password|passwd|secret|token|apikey|api-key|credential|private|key-store)/i;
+export const CREDENTIAL_KEY = /(password|passwd|secret|token|apikey|api-key|credential|private|key-store|jaas)/i;
 const BARE_PLACEHOLDER = /^\$\{[^}:]*\}$/;
 const MASK = '***';
 // host[:port], or a comma-separated list of them (mongodb replica sets); IPv6 in brackets.

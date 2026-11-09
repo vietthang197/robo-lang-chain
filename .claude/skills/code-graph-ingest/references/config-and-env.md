@@ -45,17 +45,20 @@ gapAnswers:                      # nguồn bền vững cho câu trả lời c�
 | Thuộc tính | Cách điền |
 |---|---|
 | `key` | tên key đầy đủ |
-| `value` | giá trị đã giải ở env này, **sau khi che secret** (mục 4); `null` nếu không giải được |
+| `value` | giá trị đã giải ở env này, **sau khi che secret** (mục 4); **luôn là chuỗi** (kể cả số: `"8080"`, boolean: `"true"`), `null` nếu không giải được. (Ngược lại `Deployment.port` là **số nguyên**: `8080`.) |
 | `masked` | `true` nếu value đã bị thay/cắt |
 | `isPlaceholder` | `true` nếu giá trị gốc là `${…}` lấy từ biến môi trường không có trong repo |
-| `placeholderExpr` | biểu thức gốc, ví dụ `${B_URL}` hoặc `${B_URL:http://localhost:8081}` |
-| `defaultValue` | phần default trong `${KEY:default}` (cũng phải che secret) |
+| `placeholderExpr` | biểu thức gốc, ví dụ `${B_URL}` hoặc `${B_URL:http://localhost:8081}`. **Key credential** (mục 4): giữ tên biến, phần default thay bằng `***`: `${DB_PASS:s3cr3tPwd}` → `${DB_PASS:***}` (default rỗng hoặc là placeholder khác thì giữ nguyên, nhưng default lồng bên trong cũng phải che: `${A:${B:***}}`) |
+| `defaultValue` | phần default trong `${KEY:default}`, đã che như `value`. **Key credential:** không ghi, hoặc ghi đúng `***` |
+
+Rule `R7-config-default` (validator): ConfigKey có `key` khớp mẫu key credential mà `placeholderExpr` còn default không phải `***`/rỗng/placeholder, hoặc `defaultValue` khác `***`, thì fail. Lý do: mẫu quét secret chung (`R7-secret`) không nhận ra mật khẩu nằm trong `${DB_PASS:s3cr3tPwd}`.
 | `sourceFile`, `profile` | file chứa giá trị thắng, profile của file đó (`default` cho `application.yml`) |
 
 ### Giải placeholder
 1. `${other.key}` tham chiếu key khác trong config: thay bằng giá trị đã giải của key đó.
-2. `${ENV_VAR:default}` không có trong repo: dùng `default`, `isPlaceholder=true`, `placeholderExpr` giữ nguyên biểu thức.
-3. `${ENV_VAR}` không có default và không có trong repo: `value=null`, `isPlaceholder=true`, và sinh Gap `missing-config-value` (askWho=`DevOps`) gắn vào ConfigKey (và vào ClientCall dùng key đó), câu hỏi dạng: *"Ở env uat, `b-service.url` (base URL của BClient) có giá trị gì? Key lấy từ biến môi trường `B_URL` không có trong repo."*
+2. `${ENV_VAR:default}` không có trong repo: dùng `default` (đã che secret), `isPlaceholder=true`, `placeholderExpr` giữ biểu thức gốc; **riêng key credential** ghi `placeholderExpr` với default đã che (`${DB_PASS:***}`), `value: "***"`, `defaultValue: "***"` (hoặc bỏ), `masked: true`.
+3. `${ENV_VAR}` không có default và không có trong repo: `value=null`, `isPlaceholder=true`, và sinh **một** Gap `missing-config-value` (askWho=`DevOps`) **cho mỗi ConfigKey**: uid `gap:<env>:<projectKey>:missing-config-value:<sha1(uid ConfigKey)[0:12]>`; cạnh `HAS_GAP` từ chính ConfigKey **và** từ mọi ClientCall dùng key đó (`USES_CONFIG`). Câu hỏi dạng: *"Ở env uat, `b-service.url` (base URL của BClient) có giá trị gì? Key lấy từ biến môi trường `B_URL` không có trong repo."*
+   Key được tham chiếu trong code (`${b-service.url}` trong `@FeignClient`, `@Value`) mà không có trong file config nào: vẫn tạo ConfigKey với `value=null`, `sourceFile=null`, và Gap như trên.
 
 ## 3. Deployment
 
@@ -73,14 +76,16 @@ Một `Deployment` cho mỗi `(env, projectKey)`, uid `<env>:<projectKey>:deploy
 
 ## 4. Secret
 
-- Mẫu key secret: `(?i)(password|passwd|secret|token|apikey|api-key|credential|private|key-store|uri|url)`.
-- Key credential thật (`password|passwd|secret|token|apikey|api-key|credential|private|key-store`): **value luôn thay bằng `***`**, `masked=true`, kể cả khi giá trị trông vô hại. Ví dụ `spring.datasource.password: secret` → `value: "***"`, `masked: true`.
+- Mẫu key secret: `(?i)(password|passwd|secret|token|apikey|api-key|credential|private|key-store|jaas|uri|url)` (`SECRET_KEY` trong `<skill>/scripts/core/secrets.mjs`; `jaas` bắt `spring.kafka.properties.sasl.jaas.config`).
+- Key credential thật (`password|passwd|secret|token|apikey|api-key|credential|private|key-store|jaas`, `CREDENTIAL_KEY`): **value luôn thay bằng `***`**, `masked=true`, kể cả khi giá trị trông vô hại; default trong placeholder cũng che (`${DB_PASS:***}`, mục 2). Ví dụ `spring.datasource.password: secret` → `value: "***"`, `masked: true`.
 - Key `uri|url`: là URL thì **giữ scheme/host/port/path, bỏ userinfo, query và fragment**; `masked=true` nếu có cắt. Ví dụ `mongodb://app:pw@db1:27017/app_db?authSource=admin` → `mongodb://db1:27017/app_db`. URL không tách được host khỏi credential thì `***`.
 - Key bất kỳ mà value khớp mẫu secret (URL có `user:pass@`, JWT, PEM private key, `password=…`, AWS key) cũng che như trên.
 - `${ENV_VAR}` trần không phải secret (giữ nguyên); `${VAR:default}` thì xét phần default.
-- Hàm chuẩn (dùng khi phân vân): `maskConfigValue(key, value)` trong `scripts/core/secrets.mjs`:
+- Hàm chuẩn (dùng khi phân vân): `maskConfigValue(key, value)` trong `<skill>/scripts/core/secrets.mjs`:
   ```bash
-  node -e "import('./scripts/core/secrets.mjs').then(m=>console.log(m.maskConfigValue(process.argv[1],process.argv[2])))" "spring.data.mongodb.uri" "mongodb://u:p@h:27017/db"
+  cd <skill> && node -e "import('./scripts/core/secrets.mjs').then(m=>console.log(m.maskConfigValue(process.argv[1],process.argv[2])))" "spring.data.mongodb.uri" "mongodb://u:p@h:27017/db"
   ```
 - Không đọc `.env`, `.env.*`, keystore (`*.jks`, `*.p12`), hay file bị `.gitignore` chứa secret; ghi chúng vào `coverage.skipped` với lý do `secret file`.
-- Không chép secret vào `description`, `evidence`, `diagnostics`, `question`. `validate-bundle` quét lại toàn bộ bundle (rule `R7-secret`); gặp là fail.
+- Không chép secret vào `description`, `evidence`, `diagnostics`, `question`. `validate-bundle` quét lại toàn bộ bundle (rule `R7-secret`) và kiểm default của key credential (rule `R7-config-default`); gặp là fail.
+
+`<skill>` trong các lệnh = thư mục skill `.claude/skills/code-graph-ingest`.

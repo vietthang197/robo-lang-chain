@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url';
 import { readJson } from '../core/io.mjs';
 import { validateBundle } from '../core/validate.mjs';
 import { planLinks } from '../core/link.mjs';
-import { parseUid } from '../core/uid.mjs';
 
 const EXPECTED = (name) =>
   fileURLToPath(new URL(`../../templates/fixtures/spring-boot/expected/${name}.uat.bundle.json`, import.meta.url));
@@ -139,5 +138,23 @@ test('link records the caller host on the target deployment', () => {
 test('spring rule catches server.port not reflected in Deployment.port', () => {
   const b = loadB();
   b.nodes.find((n) => n.type === 'Deployment').props.port = 9999;
-  assert.ok(springIssues(b).some((i) => parseUid(i.uid ?? '').group === 'config' || i.uid?.endsWith(':deployment')));
+  const issues = springIssues(b);
+  assert.deepEqual(issues.map((i) => [i.rule, i.uid]), [['spring-boot-server-port', 'uat:b-service:deployment']]);
+});
+
+test('link without discoveryName: port-only medium, then high once the host is known', () => {
+  const OPTS = { env: 'uat', scanId: 'uat-link-20261110T000000Z' };
+  const a = loadA();
+  a.nodes.find((n) => n.uid === CALL).props.discoveryName = null;
+  const tOf = (link) => link.edges.filter((e) => e.type === 'TARGETS' && e.from === CALL).map((e) => [e.to, e.props.matchedBy, e.props.confidence]);
+
+  assert.deepEqual(tOf(planLinks(linkInput([a, loadB()]), { ...OPTS, gapAnswers: [] })), [[B_EP, 'host+path', 'medium']]);
+
+  const b = loadB();
+  b.nodes.find((n) => n.type === 'Deployment').props.hosts = ['10.1.2.3'];
+  assert.deepEqual(tOf(planLinks(linkInput([a, b]), { ...OPTS, gapAnswers: [] })), [[B_EP, 'host+path', 'high']]);
+
+  // The same host learned from a recorded answer (gapAnswers) gives a manual/high target.
+  const answers = [{ env: 'uat', clientCall: CALL, answer: { targetService: 'b-service', host: '10.1.2.3' }, answeredBy: 'BA' }];
+  assert.deepEqual(tOf(planLinks(linkInput([a, loadB()]), { ...OPTS, gapAnswers: answers })), [[B_EP, 'manual', 'high']]);
 });

@@ -39,5 +39,5 @@ Phải ghi: danh sách lỗi dễ mắc khi đọc loại project này, mỗi b�
 ## 8. Conformance
 Phải ghi:
 - Đường dẫn fixture `templates/fixtures/<profile>/` và bundle kỳ vọng `templates/fixtures/<profile>/expected/*.bundle.json`, cùng trích đoạn bundle kỳ vọng cho các phần tử quan trọng nhất.
-- Rule validate riêng của profile: id rule (bắt đầu bằng tên profile), điều kiện, cách sửa khi fail. Rule được cài trong `scripts/core/profile-rules/index.mjs` và chạy bằng `node scripts/validate-bundle.mjs <bundle> --profile <profile>`.
-- Test chứng minh fixture pass (`scripts/test/profile-<profile>.test.mjs`).
+- Rule validate riêng của profile: id rule (bắt đầu bằng tên profile), điều kiện, cách sửa khi fail. Rule được cài trong `<skill>/scripts/core/profile-rules/index.mjs` và chạy bằng `node <skill>/scripts/validate-bundle.mjs <bundle> --profile <profile>`.
+- Test chứng minh fixture pass (`<skill>/scripts/test/profile-<profile>.test.mjs`).

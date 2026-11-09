@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { readJson } from '../core/io.mjs';
-import { findSecrets, maskConfigValue } from '../core/secrets.mjs';
+import { findSecrets, maskConfigValue, CREDENTIAL_KEY, SECRET_KEY } from '../core/secrets.mjs';
 import { validateBundle } from '../core/validate.mjs';
 
 const JWT = 'eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig';
@@ -74,4 +74,32 @@ test('validator fails on secret anywhere', () => {
   d.nodes[2].props.description = 'ok';
   d.diagnostics.push({ level: 'warn', message: 'password=hunter22' });
   assert.ok(validateBundle(d).errors.some((e) => e.rule === 'R7-secret'));
+});
+
+test('jaas config keys are credential keys', () => {
+  const jaas = 'org.apache.kafka.common.security.plain.PlainLoginModule required username="app" password="pw";';
+  assert.deepEqual(maskConfigValue('spring.kafka.properties.sasl.jaas.config', jaas), { value: '***', masked: true });
+  assert.ok(CREDENTIAL_KEY.test('sasl.jaas.config') && SECRET_KEY.test('sasl.jaas.config'));
+});
+
+test('R7-config-default: credential defaults must be masked', () => {
+  const base = structuredClone(readJson(fileURLToPath(new URL('./fixtures/valid-min.bundle.json', import.meta.url))));
+  const withKey = (key, props) => {
+    const b = structuredClone(base);
+    const uid = `uat:robo-lang-chain:config:${key}`;
+    b.nodes.push({ type: 'ConfigKey', uid, props: { key, value: '***', masked: true, isPlaceholder: true, ...props } });
+    b.edges.push({ type: 'CONTAINS', from: 'uat:robo-lang-chain:service:robo-lang-chain', to: uid, props: {} });
+    return validateBundle(b).errors.filter((e) => e.rule === 'R7-config-default');
+  };
+  // findSecrets alone misses this one.
+  assert.deepEqual(findSecrets('${DB_PASS:secret123}'), []);
+  assert.equal(withKey('spring.datasource.password', { placeholderExpr: '${DB_PASS:secret123}' }).length, 1);
+  assert.equal(withKey('spring.datasource.password', { placeholderExpr: '${DB_PASS:***}', defaultValue: 's3cr3t' }).length, 1);
+  assert.equal(withKey('app.client-secret', { placeholderExpr: '${A:${B:topsecret}}' }).length, 1);
+  assert.equal(withKey('spring.kafka.properties.sasl.jaas.config', { placeholderExpr: '${JAAS:x y z}' }).length, 1);
+  for (const expr of ['${DB_PASS:***}', '${DB_PASS}', '${DB_PASS:}', '${A:${B}}', '${A:${B:***}}'])
+    assert.deepEqual(withKey('spring.datasource.password', { placeholderExpr: expr, defaultValue: '***' }), [], expr);
+  assert.deepEqual(withKey('spring.datasource.password', { placeholderExpr: null, defaultValue: null }), []);
+  // Non-credential keys keep their defaults.
+  assert.deepEqual(withKey('server.port', { value: '8080', masked: false, placeholderExpr: '${PORT:8080}', defaultValue: '8080' }), []);
 });

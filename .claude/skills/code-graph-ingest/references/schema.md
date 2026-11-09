@@ -46,11 +46,11 @@ Tài liệu này là **nguồn chuẩn** cho mọi node, edge, thuộc tính và
   - Operation: `<FQN component>#<tên method>`, **không** kèm chữ ký. Overload thứ 2, 3… thêm hậu tố `~2`, `~3` theo thứ tự xuất hiện trong file (overload đầu tiên không có hậu tố); chữ ký thật để ở `props.signature` (ví dụ `getItem(String)`).
   - Member: `<FQN component>#<tên field>`.
   - Bean: tên bean (Spring mặc định: tên class viết thường chữ đầu, `@Bean` thì tên method; có `@Qualifier`/tên tường minh thì dùng tên đó).
-  - ClientCall: `<qualifiedName của Operation>-><clientKind>:<httpMethod> <urlTemplate>`. Không có httpMethod (OFS, producer) thì bỏ phần method: `com.x.T24Client#transfer->ofs:FUNDS.TRANSFER,ACTR`, `com.x.PaymentPublisher#publish->kafka-producer:payment.created`. Trùng thì thêm `~2`, `~3` theo thứ tự xuất hiện.
+  - ClientCall: `<qualifiedName của Operation>-><clientKind>:<httpMethod> <urlTemplate>`. Không có httpMethod (OFS, producer) thì bỏ phần method: `com.x.T24Client#transfer->ofs:FUNDS.TRANSFER,ACTR`, `com.x.PaymentPublisher#publish->kafka-producer:payment.created`. **Không biết `urlTemplate`** (URL tạo lúc chạy): dùng `?` cho phần URL và `ANY` khi cũng không biết method: `com.x.DynClient#call->rest-template:ANY ?` (props `urlTemplate` vẫn là `null`, kèm Gap `unresolved-call`). Trùng thì thêm `~2`, `~3` theo thứ tự xuất hiện (`…->rest-template:ANY ?~2`).
 - Endpoint `signature`: http là `<METHOD> <path>` (method viết hoa, `path` theo **ruling R16**: không gồm context-path); ofs là `APP,VERSION` hoặc `ENQ <NAME>`; langchain4j-tool là tên tool.
 - **Không dùng số dòng trong uid**, để sửa code ở chỗ khác không làm uid đổi.
 - `projectKey` (**ruling R12, validator rule `R1-projectKey`**): không được là `system`, `__system__`, và không chứa `:`. `__system__` dành riêng cho link bundle.
-- `<hash>` của Gap: 12 ký tự hex đầu của `sha1(<uid của node mà Gap gắn vào>)`; Gap gom theo module (`unread-files`) thì hash trên `<uid của Module>`. Cùng chủ thể và cùng kind thì cùng uid ở mọi lần scan.
+- `<hash>` của Gap: 12 ký tự hex đầu của `sha1(<uid của node mà Gap gắn vào>)`; Gap gom theo module (`unread-files`) thì hash trên `<uid của Module>`; `missing-config-value` là **một Gap cho mỗi ConfigKey**, hash trên `<uid của ConfigKey>`, có `HAS_GAP` từ ConfigKey và từ mọi ClientCall dùng key đó (`config-and-env.md` §2). Cùng chủ thể và cùng kind thì cùng uid ở mọi lần scan.
   ```bash
   node -e "console.log(require('crypto').createHash('sha1').update(process.argv[1]).digest('hex').slice(0,12))" "<uid>"
   ```
@@ -102,7 +102,7 @@ Tài liệu này là **nguồn chuẩn** cho mọi node, edge, thuộc tính và
 |---|---|---|
 | `Endpoint` | protocol (`http`, `ofs`, `iris`, `grpc`, `ui-route`, `deep-link`, `human-task`, `batch`, `langchain4j-tool`), httpMethod, path, pathRegex, signature | điểm vào của service. **Ruling R16:** `path` = `@RequestMapping` của class + mapping của method, **không gồm** servlet context-path; `pathRegex` sinh từ `path` |
 | `ClientCall` | clientKind, httpMethod, urlTemplate, baseUrlConfigKey, resolvedBaseUrl, resolvedHost, resolvedPort, resolvedPath, **discoveryName**, **signature**, **topic**, confidence | một chỗ trong code gọi ra ngoài. Ba trường in đậm theo **ruling R15**; giá trị `null` nghĩa là "không biết / không áp dụng" |
-| `ConfigKey` | key, value (secret thay bằng `***`), masked, isPlaceholder, placeholderExpr, defaultValue, sourceFile, profile | theo env, xem `config-and-env.md` |
+| `ConfigKey` | key, value (luôn là chuỗi; secret thay bằng `***`), masked, isPlaceholder, placeholderExpr, defaultValue, sourceFile, profile | theo env, xem `config-and-env.md`. Key credential: `placeholderExpr` giữ tên biến nhưng default che `***` (`${DB_PASS:***}`), `defaultValue` bỏ hoặc `***` (rule `R7-config-default`) |
 | `Bean` | framework, scope, source | DI (Spring bean, provider Angular, …) |
 | `Component` | stereotype (`controller`, `service`, `repository`, `config`, `entity`, `dto`, `feign-client`, `t24-routine`, `t24-version`, `t24-enquiry`, `bpmn-process`, `ui-component`, `screen`, …) | |
 

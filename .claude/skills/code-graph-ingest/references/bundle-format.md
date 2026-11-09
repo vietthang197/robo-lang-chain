@@ -1,6 +1,6 @@
 # Định dạng bundle
 
-Bundle là file JSON chứa node và edge của **một lần scan** (một project, một env). Schema máy đọc: `templates/bundle.schema.json`. Validator: `node scripts/validate-bundle.mjs <bundle.json> --profile <profile>`.
+Bundle là file JSON chứa node và edge của **một lần scan** (một project, một env). Schema máy đọc: `templates/bundle.schema.json`. Validator: `node <skill>/scripts/validate-bundle.mjs <bundle.json> --profile <profile>`. (`<skill>` = thư mục skill `.claude/skills/code-graph-ingest`.)
 
 ## 1. Cấu trúc
 
@@ -99,14 +99,18 @@ Ví dụ đầy đủ hơn (Feign, repository, DataStore, Bean, Tag, Library, co
 Mỗi Gap ghi **3 chỗ**: node `Gap`, cạnh `HAS_GAP` từ node liên quan, và một dòng trong `gaps[]`.
 
 ```json
-{ "type": "Gap", "uid": "gap:uat:a-service:missing-config-value:<sha1(uid ClientCall)[0:12]>",
+{ "type": "Gap", "uid": "gap:uat:a-service:missing-config-value:<sha1('uat:a-service:config:b-service.url')[0:12]>",
   "props": { "kind": "missing-config-value", "askWho": "DevOps", "status": "open", "candidates": [],
              "question": "Ở env uat, b-service.url (base URL của BClient) có giá trị gì? Key không có trong application-uat.yml/application.yml." } }
 ```
 ```json
+{ "type": "HAS_GAP", "from": "uat:a-service:config:b-service.url", "to": "gap:uat:a-service:missing-config-value:<hash>", "props": {} }
 { "type": "HAS_GAP", "from": "uat:a-service:clientcall:com.example.a.client.BClient#getItem->feign:GET /items/{id}",
   "to": "gap:uat:a-service:missing-config-value:<hash>", "props": {} }
 ```
+`missing-config-value` là **một Gap cho mỗi ConfigKey** (hash trên uid ConfigKey), có `HAS_GAP` từ ConfigKey và từ mọi ClientCall dùng key đó. Các kind khác hash trên uid của node mà Gap gắn vào (`schema.md` §2.1).
+
+ConfigKey của key credential dùng placeholder có default: `"placeholderExpr": "${DB_PASS:***}"`, `"value": "***"`, `"masked": true`, `defaultValue` bỏ hoặc `"***"` (rule `R7-config-default`, `config-and-env.md` §2).
 
 Gap trong bundle ingest luôn dùng `gap:<env>:<projectKey>:…` (**ruling R12**); `gap:<env>:system:…` chỉ do `link` sinh. Câu hỏi viết tiếng Việt, cụ thể, nêu đủ để người được hỏi trả lời mà không cần mở code.
 
@@ -116,9 +120,9 @@ Gap trong bundle ingest luôn dùng `gap:<env>:<projectKey>:…` (**ruling R12**
 - Node trùng uid giữa các part được gộp props: prop còn rỗng được điền từ part sau, prop đã có giá trị ở part trước thì giữ nguyên. Cạnh trùng `(type, from, to)` và gap trùng uid chỉ giữ bản đầu tiên. Vì vậy node dùng chung (Tag, Library, ext:) nên ghi giống hệt nhau ở mọi part.
 - Lệnh:
   ```bash
-  node scripts/merge-bundles.mjs bundle.json bundle.part-*.json
-  node scripts/validate-bundle.mjs bundle.json --profile spring-boot
-  node scripts/diff-bundle.mjs bundle.prev.json bundle.json diff.md      # "-" thay prev ở lần đầu
+  node <skill>/scripts/merge-bundles.mjs bundle.json bundle.part-*.json
+  node <skill>/scripts/validate-bundle.mjs bundle.json --profile spring-boot
+  node <skill>/scripts/diff-bundle.mjs bundle.prev.json bundle.json diff.md      # "-" thay prev ở lần đầu
   ```
 
 ## 5. Validate: các rule
@@ -133,6 +137,7 @@ Gap trong bundle ingest luôn dùng `gap:<env>:<projectKey>:…` (**ruling R12**
 | `R5-service-surface` / `R5-clientcall-url` | Service có ≥1 Endpoint/Channel/Gap; ClientCall có `urlTemplate` hoặc `HAS_GAP` |
 | `R6-description-evidence` / `R6-required-description` | có `description` thì phải có `evidence[]` + `confidence`; Component `controller`/`service`, Endpoint, Capability (không external) bắt buộc có description |
 | `R7-secret` | không chuỗi nào khớp mẫu secret (URL có userinfo, JWT, PEM, `password=…`, AWS key) |
+| `R7-config-default` | ConfigKey có key credential (`password|passwd|secret|token|apikey|api-key|credential|private|key-store|jaas`): default trong `placeholderExpr` phải là `***`, rỗng hoặc placeholder khác; `defaultValue` bỏ hoặc `***` |
 | `<profile>-…` | rule riêng của profile, xem mục 8 của profile |
 | `W-*` | cảnh báo, không fail: độ phủ < 95%, Operation không ai gọi và không phải entry, Capability chỉ có 1 Endpoint |
 
@@ -141,7 +146,7 @@ Validate fail thì sửa bundle và chạy lại; **không nạp** bundle chưa 
 ## 6. Nạp (tóm tắt các điểm dễ sai)
 
 ```bash
-node scripts/bundle-to-cypher.mjs bundle.json load-batches            # --mode ingest (mặc định)
+node <skill>/scripts/bundle-to-cypher.mjs bundle.json load-batches            # --mode ingest (mặc định)
 ```
 - Lệnh ghi `load-batches/NNN-*.cypher` và `plan.json` (`[{file, language, expectNodes?}]`). Gửi từng file **theo đúng thứ tự trong `plan.json`** qua MCP ArcadeDB (`language` = `sqlscript` cho `000-schema`, `cypher` cho phần còn lại).
 - Mỗi lô ≤ 300 dòng **và** ≤ 200 000 ký tự Cypher (script tự chia).

@@ -8,7 +8,7 @@ Mục tiêu: từ một chỗ gọi ra ngoài trong code, dựng được chuỗ
 - Mỗi chỗ gọi ra ngoài là một `ClientCall`, gắn vào `Operation` phát ra lời gọi bằng `MAKES_CALL {line}`:
   - Feign / declarative client (`@FeignClient`, `@HttpExchange`): Operation là **method của interface client** (`com.example.a.client.BClient#getItem`); caller nội bộ có `CALLS {dispatch:'interface'}` tới method đó.
   - RestTemplate / WebClient / RestClient / HttpClient / OFS / producer: Operation là method chứa câu lệnh gọi.
-- uid: `<env>:<projectKey>:clientcall:<qualifiedName Operation>-><clientKind>:<httpMethod> <urlTemplate>` (không có method thì bỏ phần method; trùng thì `~2`, `~3`). Ví dụ `uat:a-service:clientcall:com.example.a.client.BClient#getItem->feign:GET /items/{id}`.
+- uid: `<env>:<projectKey>:clientcall:<qualifiedName Operation>-><clientKind>:<httpMethod> <urlTemplate>` (không có method thì bỏ phần method; trùng thì `~2`, `~3`). Ví dụ `uat:a-service:clientcall:com.example.a.client.BClient#getItem->feign:GET /items/{id}`. Không biết URL: phần URL là `?`, method không biết là `ANY`: `uat:a-service:clientcall:com.x.DynClient#call->rest-template:ANY ?` (trùng: `…ANY ?~2`); props `urlTemplate` vẫn `null`.
 
 ### 1.2 Điền thuộc tính (ruling R15: `null` = không biết / không áp dụng)
 | Trường | Quy tắc |
@@ -31,8 +31,8 @@ Mục tiêu: từ một chỗ gọi ra ngoài trong code, dựng được chuỗ
 ### 1.3 Khi không xác định được
 | Tình huống | Ghi gì |
 |---|---|
-| Không tìm ra URL (đọc từ DB, tham số runtime…) | `urlTemplate=null`, Gap `unresolved-call` (askWho=`Dev`): *"Lời gọi `<clientKind>` trong `<Operation>` dùng URL nào? URL được tạo lúc chạy từ `<biến/nguồn>`."* |
-| Key base URL không có giá trị ở env | `resolved*=null`, Gap `missing-config-value` (askWho=`DevOps`) gắn vào ClientCall và ConfigKey: *"Ở env `<env>`, `<key>` (base URL của `<Client>`) có giá trị gì?"* |
+| Không tìm ra URL (đọc từ DB, tham số runtime…) | `urlTemplate=null`, uid dùng `?` (§1.1), Gap `unresolved-call` (askWho=`Dev`, hash trên uid ClientCall): *"Lời gọi `<clientKind>` trong `<Operation>` dùng URL nào? URL được tạo lúc chạy từ `<biến/nguồn>`."* |
+| Key base URL không có giá trị ở env | `resolved*=null`; **một** Gap `missing-config-value` (askWho=`DevOps`) cho ConfigKey đó (hash trên uid ConfigKey), `HAS_GAP` từ ConfigKey và từ mọi ClientCall dùng key: *"Ở env `<env>`, `<key>` (base URL của `<Client>`) có giá trị gì?"* (`config-and-env.md` §2) |
 | Gọi tới host không thuộc project nào đã biết | ingest không cần làm gì; `link` sẽ tạo `ExternalSystem` hoặc Gap `unknown-external` |
 
 Rule chung `R5-clientcall-url`: mọi ClientCall có `urlTemplate` hoặc `HAS_GAP`. Rule `spring-boot-clientcall-base-url`: ClientCall HTTP (`feign|rest-template|web-client|rest-client`) có `USES_CONFIG {role:'base-url'}` hoặc `HAS_GAP` (được miễn: URL tuyệt đối viết cứng trong code, và lời gọi chỉ qua discovery: `discoveryName` có giá trị, `baseUrlConfigKey` null).
@@ -41,11 +41,13 @@ Rule chung `R5-clientcall-url`: mọi ClientCall có `urlTemplate` hoặc `HAS_G
 
 Chạy sau **mỗi** lần ingest (ingest lại một project xoá các cạnh đi ra từ node của nó, kể cả `TARGETS`). Workspace: `code-graph-workspace/<env>/link/`.
 
+`<skill>` = thư mục skill `.claude/skills/code-graph-ingest`.
+
 ```bash
-node scripts/print-queries.mjs link --env uat          # in JSON [{name, cypher}]
+node <skill>/scripts/print-queries.mjs link --env uat          # in JSON [{name, cypher}]
 # chạy từng câu qua MCP ArcadeDB `query` (language cypher), lưu {<name>: records} vào link-input.json
-node scripts/link-plan.mjs link-input.json ../../system-catalog.yaml uat link-bundle.json
-node scripts/bundle-to-cypher.mjs link-bundle.json link-batches --mode link
+node <skill>/scripts/link-plan.mjs link-input.json ../../system-catalog.yaml uat link-bundle.json
+node <skill>/scripts/bundle-to-cypher.mjs link-bundle.json link-batches --mode link
 # gửi từng file theo thứ tự trong link-batches/plan.json; 990-count phải bằng expectNodes
 ```
 
@@ -55,7 +57,7 @@ node scripts/bundle-to-cypher.mjs link-bundle.json link-batches --mode link
 - Deployment: `port`/`contextPath`/`hosts`.
 - Channel + `SUBSCRIBES`/`PUBLISHES` cho phụ thuộc bất đồng bộ; `ACCESSES {mode}` tới DataStore cho `OWNS_DATA`/`READS_DATA`.
 
-### 2.1 Thứ tự ưu tiên khi khớp (đúng như `scripts/core/link.mjs`)
+### 2.1 Thứ tự ưu tiên khi khớp (đúng như `<skill>/scripts/core/link.mjs`)
 Path của lời gọi = `resolvedPath`, không có thì path của `urlTemplate`. Trước khi so với `Endpoint.pathRegex` của project P, cắt `Deployment.contextPath` của P khỏi path (**ruling R16**); path không nằm dưới context-path đó thì P không phải ứng viên. Method phải khớp (Endpoint `ANY`/`*` khớp mọi method).
 
 0. **`gapAnswers` trong catalog (ruling R17)**: có mục cho ClientCall này thì dựng `TARGETS {matchedBy:'manual', confidence:'high'}` tới Endpoint khớp path của `targetService`, bỏ qua tự động; `answer.host` được thêm vào `Deployment.hosts` của đích. Nếu tự động lẽ ra sinh Gap thì Gap đó được ghi `status=answered`. Câu trả lời không khớp Endpoint nào → Gap `ambiguous-target` báo câu trả lời sai.
@@ -65,7 +67,8 @@ Path của lời gọi = `resolvedPath`, không có thì path của `urlTemplate
 4. **Discovery name**: `discoveryName` (hoặc host) = `Service.name`/projectKey của P và path khớp đúng 1 P → `matchedBy=host+path`, high.
 5. **Port-only**: P chưa có `hosts` nhưng `Deployment.port = resolvedPort` và path khớp đúng 1 P → `matchedBy=host+path`, medium.
 6. **Chỉ path**: path khớp đúng 1 project → `matchedBy=path`, medium; nhiều project → Gap `ambiguous-target`.
-7. **Không ứng viên**: có host → `TARGETS {matchedBy:'host', confidence:'medium'}` tới `ExternalSystem` `sys:<env>:<host>`; không có host → Gap `unknown-external`.
+7. **Trúng host/port nhưng trượt endpoint (ruling R20)**: không bước nào ở trên khớp, nhưng lời gọi tới đúng chỗ của một project đã scan, tức `resolvedHost` ∈ `Deployment.hosts` của project khác (port tương thích), hoặc (host không nằm trong `hosts` của project nào) `resolvedPort` bằng `Deployment.port` của **đúng một** project khác, thì sinh Gap `unresolved-call` (askWho=`Dev`, `candidates[]` = `{projectKey, hosts, port, contextPath}`) và **không** tạo TARGETS tới ExternalSystem. Nguyên nhân thường gặp: base URL của bên gọi thiếu context-path của đích (ví dụ `http://10.1.2.3:8081` thay vì `http://10.1.2.3:8081/b`), hoặc path/method sai.
+8. **Không ứng viên**: có host → `TARGETS {matchedBy:'host', confidence:'medium'}` tới `ExternalSystem` `sys:<env>:<host>`; không có host → Gap `unknown-external`.
 
 Sau khi khớp: điền `Deployment.hosts[]` từ `resolvedHost` của lời gọi khớp high (trừ khi host là tên service); xoá các cạnh `derived:true` cũ của env và sinh lại `SERVICE_DEPENDS_ON` (protocol, sync, endpointsUsed, callCount, confidence thấp nhất), `OWNS_DATA` (có `write`/`rw`), `READS_DATA`.
 
@@ -75,7 +78,8 @@ Fixture: a-service gọi `BClient#getItem` (`discoveryName=b-service`, `resolved
 - uid `gap:<env>:system:<kind>:<sha1(uid ClientCall)[0:12]>` (**ruling R12**: chỉ link sinh `gap:<env>:system:…`; bị dọn và sinh lại ở mỗi lần link). Gắn bằng `HAS_GAP` từ ClientCall.
 - `ambiguous-target`: askWho=`BA`, `candidates[]` = `{projectKey, hosts, port}` của từng ứng viên. Câu hỏi: *"Lời gọi `GET /items/{id}` từ a-service trỏ tới host/IP nào?"*
 - `unknown-external`: askWho=`DevOps`. Câu hỏi: *"Lời gọi `GET /x` từ a-service trỏ tới hệ thống nào (host/IP hoặc service)?"*
-- Trả lời: ghi vào `gapAnswers` của catalog (`config-and-env.md` §1), rồi chạy lại `link`. **Không sửa `TARGETS` trong DB.**
+- `unresolved-call` (bước 7, ruling R20): askWho=`Dev`, `candidates[]` = `{projectKey, hosts, port, contextPath}`. Câu hỏi: *"Lời gọi `GET /items/{id}` từ a-service trỏ tới host/port của b-service nhưng không khớp endpoint nào (context-path /b). Base URL có thiếu context-path không?"* Cách đóng: Dev xác nhận rồi sửa config/code (thêm context-path vào base URL, sửa path), ingest lại bên gọi và chạy lại `link`; nếu bundle đã ghi sai `resolvedPath` so với config thật thì sửa bundle. `gapAnswers` **không** đóng được Gap này, vì khớp thủ công vẫn so path sau khi cắt context-path.
+- Trả lời `ambiguous-target`/`unknown-external`: ghi vào `gapAnswers` của catalog (`config-and-env.md` §1), rồi chạy lại `link`. **Không sửa `TARGETS` trong DB.**
 
 ### 2.3 Câu hỏi Gap: cách viết
 - Tiếng Việt, một câu hỏi, nêu đủ: lời gọi nào (method + URL), từ service nào, cần biết gì (host/IP, giá trị config, tên service đích).

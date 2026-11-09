@@ -1,7 +1,7 @@
 // General bundle validation (spec §10) plus the per-profile rule hook.
 import { SCHEMA_VERSION, ENVS, VERTEX_TYPES, EDGE_TYPES, GAP_KINDS } from './model.mjs';
 import { checkUid, isShared, parseUid } from './uid.mjs';
-import { findSecrets } from './secrets.mjs';
+import { findSecrets, CREDENTIAL_KEY } from './secrets.mjs';
 import { profileRules } from './profile-rules/index.mjs';
 
 const SYSTEM_SCAN = '__system__';
@@ -80,6 +80,31 @@ function checkShape(bundle, err) {
   });
   return true;
 }
+
+// Defaults of every ${VAR:default} in expr, nested placeholders included. An unclosed
+// placeholder yields its raw tail so it is still judged.
+function placeholderDefaults(expr) {
+  const out = [];
+  for (let i = expr.indexOf('${'); i >= 0; i = expr.indexOf('${', i + 2)) {
+    let depth = 0;
+    let end = -1;
+    for (let j = i + 1; j < expr.length; j++) {
+      if (expr[j] === '{') depth++;
+      else if (expr[j] === '}' && --depth === 0) { end = j; break; }
+    }
+    const body = expr.slice(i + 2, end < 0 ? expr.length : end);
+    let colon = -1;
+    for (let j = 0, d = 0; j < body.length; j++) {
+      if (body[j] === '{') d++;
+      else if (body[j] === '}') d--;
+      else if (body[j] === ':' && d === 0) { colon = j; break; }
+    }
+    if (colon >= 0) out.push(body.slice(colon + 1));
+  }
+  return out;
+}
+// A credential default may only be empty, masked, or another placeholder (judged on its own).
+const safeDefault = (d) => d === '' || d === '***' || /^\$\{.*\}$/s.test(d);
 
 // Calls visit(path, string) for every string value nested in value.
 function walkStrings(value, path, visit) {
@@ -184,6 +209,18 @@ export function validateBundle(bundle, options = {}) {
   scanSecrets(bundle.edges, 'edges', (e) => e?.from);
   scanSecrets(bundle.gaps, 'gaps', (g) => g?.uid);
   scanSecrets(bundle.diagnostics, 'diagnostics', () => undefined);
+
+  // R7-config-default: a credential ConfigKey never keeps a clear-text default; findSecrets
+  // cannot see one inside ${DB_PASS:s3cr3t}. Nested defaults are collected by placeholderDefaults.
+  for (const k of ofType('ConfigKey')) {
+    const p = k.props ?? {};
+    const key = typeof p.key === 'string' ? p.key : k.uid.slice(k.uid.indexOf(':config:') + ':config:'.length);
+    if (!CREDENTIAL_KEY.test(key)) continue;
+    if (typeof p.placeholderExpr === 'string' && !placeholderDefaults(p.placeholderExpr).every(safeDefault))
+      err('R7-config-default', 'placeholderExpr of a credential key must mask its default as ${VAR:***}', k.uid);
+    if (p.defaultValue !== undefined && p.defaultValue !== null && p.defaultValue !== '***')
+      err('R7-config-default', 'defaultValue of a credential key must be absent or ***', k.uid);
+  }
 
   // Warnings.
   const cov = scan.coverage;

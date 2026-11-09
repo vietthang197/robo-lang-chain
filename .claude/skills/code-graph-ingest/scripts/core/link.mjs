@@ -80,6 +80,21 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
     return { projectKey: pk, hosts: hostsOf(pk), port: d?.port ?? null };
   };
 
+  // Projects (other than the caller) whose Deployment the call reaches by host (port compatible),
+  // else by port alone when exactly one Deployment has that port.
+  function nearMiss(call, host, port) {
+    const others = [...deployments.keys()].filter((pk) => pk !== call.projectKey).sort(byStr);
+    const portOk = (d) => port === null || d.port == null || d.port === port;
+    if (host !== null) {
+      const byHost = others.filter((pk) => hostsOf(pk).includes(host) && portOk(deployments.get(pk)));
+      if (byHost.length) return byHost;
+      if (others.some((pk) => hostsOf(pk).includes(host))) return [];
+    }
+    if (port === null) return [];
+    const byPort = others.filter((pk) => deployments.get(pk).port === port);
+    return byPort.length === 1 ? byPort : [];
+  }
+
   // Automatic rules 1-4. Returns {targets:[{uid, matchedBy, confidence, protocol}]} or {gap:{kind, candidates}}
   // or {external:{host, port}}.
   function auto(call) {
@@ -141,6 +156,21 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
     const hits = matchAll(call, projectsWithHttp);
     if (hits.length === 1) return http(hits[0].pk, hits[0].ep, 'path', 'medium');
     if (hits.length > 1) return { gap: { kind: 'ambiguous-target', candidates: hits.map((x) => candidate(x.pk)) } };
+
+    // Rule 3b (ruling R20): the call reaches the host/port of a scanned project but no endpoint of it
+    // matched (typically a base URL without the target's context-path). Ask instead of silently
+    // treating the call as external.
+    const near = nearMiss(call, host, port);
+    if (near.length) {
+      const pks = near.join(', ');
+      const ctx = near.map((pk) => deployments.get(pk)?.contextPath ?? '(không có)').join(', ');
+      const what = [call.httpMethod, call.resolvedPath ?? call.urlTemplate].filter(Boolean).join(' ');
+      return { gap: {
+        kind: 'unresolved-call',
+        candidates: near.map((pk) => ({ ...candidate(pk), contextPath: deployments.get(pk)?.contextPath ?? null })),
+        question: `Lời gọi ${what} từ ${call.projectKey} trỏ tới host/port của ${pks} nhưng không khớp endpoint nào (context-path ${ctx}). Base URL có thiếu context-path không?`,
+      } };
+    }
     if (host !== null) return { external: { host, port } };
     return { gap: { kind: 'unknown-external', candidates: [] } };
   }
@@ -167,7 +197,7 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
   const describe = (call) => [call.httpMethod, call.urlTemplate ?? call.signature ?? call.topic ?? call.uid].filter(Boolean).join(' ');
   function addGap(call, kind, candidates, question, extra = {}) {
     const uid = gapUidFor(env, kind, call.uid);
-    const askWho = kind === 'unknown-external' ? 'DevOps' : 'BA';
+    const askWho = kind === 'unknown-external' ? 'DevOps' : kind === 'unresolved-call' ? 'Dev' : 'BA';
     const props = { kind, askWho, question, candidates, status: 'open', clientCall: call.uid, ...extra };
     nodes.set(uid, { type: 'Gap', uid, props });
     gaps.push({ uid, ...props });
@@ -196,7 +226,7 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
         target(call, t);
         // Only the recorded answer.host is trusted; the call's resolvedHost is not (ruling R18).
         if (a.answer.host != null) addHost(t.pk, a.answer.host);
-        if (r.gap) addGap(call, r.gap.kind, r.gap.candidates, questionFor(call, r.gap.kind), {
+        if (r.gap) addGap(call, r.gap.kind, r.gap.candidates, r.gap.question ?? questionFor(call, r.gap.kind), {
           status: 'answered', answer: `targetService=${a.answer.targetService}${a.answer.host ? `, host=${a.answer.host}` : ''}`,
           ...(a.answeredBy ? { answeredBy: a.answeredBy } : {}),
         });
@@ -222,7 +252,7 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
       if (r.external.port !== null) externals.get(r.external.host).add(r.external.port);
       target(call, { uid, matchedBy: 'host', confidence: 'medium', protocol: 'http' });
     } else {
-      addGap(call, r.gap.kind, r.gap.candidates, questionFor(call, r.gap.kind));
+      addGap(call, r.gap.kind, r.gap.candidates, r.gap.question ?? questionFor(call, r.gap.kind));
     }
   }
 

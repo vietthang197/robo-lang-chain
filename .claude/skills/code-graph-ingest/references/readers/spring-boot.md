@@ -142,6 +142,7 @@ Field của entity, dto, `@ConfigurationProperties` → `Member` (`Component -CO
 - `Deployment.port` = `server.port` (mặc định `8080`); `Deployment.contextPath` = `server.servlet.context-path` (WebFlux: `spring.webflux.base-path`), mặc định `null`; cạnh `USES_CONFIG {role:'port'|'context-path'}` từ Deployment. `management.server.port` không phải port của Deployment.
 - `Deployment.hosts`: từ manifest deploy nếu có (`k8s` Service/Ingress host, `eureka.instance.hostname`), không thì `[]`.
 - Base URL: §4.2.
+- Placeholder của key credential: `spring.datasource.password: ${DB_PASS:s3cr3tPwd}` → `value: "***"`, `masked: true`, `placeholderExpr: "${DB_PASS:***}"`, `defaultValue` bỏ hoặc `"***"` (rule `R7-config-default`, `../config-and-env.md` §2). ConfigKey `value` luôn là chuỗi (`"8081"`), `Deployment.port` là số nguyên (`8081`).
 - Secret đặc thù Spring (che bằng `***` hoặc cắt URL): `spring.datasource.password`, `spring.datasource.url` (cắt userinfo), `spring.data.mongodb.uri` (cắt userinfo/query), `spring.data.mongodb.password`, `spring.rabbitmq.password`, `spring.kafka.properties.sasl.jaas.config`, `spring.security.oauth2.client.registration.*.client-secret`, `*.jwt.secret`, `*.api-key`, `server.ssl.key-store-password`.
 
 Ví dụ (fixture a-service, env uat): `spring.datasource.password: secret` → ConfigKey `uat:a-service:config:spring.datasource.password` với `value: "***"`, `masked: true`.
@@ -163,7 +164,7 @@ Ví dụ (fixture a-service, env uat): `spring.datasource.password: secret` → 
 | Gọi qua interface (service interface + `*Impl`) | `CALLS` tới Operation của interface; Operation của `*Impl` có `OVERRIDES` tới đó |
 | Gọi method kế thừa của repository (`repo.findById`) | Operation `kind=inherited` trên chính repository + `OVERRIDES` tới `ext:…#findById`; `ACCESSES` đặt trên Operation đó (`../schema.md` §6). Trỏ thẳng `CALLS` tới `ext:` làm đứt chuỗi Endpoint → DataStore |
 | Cộng context-path vào `Endpoint.path` | Sai (**ruling R16**). `path` chỉ gồm `@RequestMapping` class + method; context-path ở `Deployment.contextPath` |
-| Base URL của bên gọi thiếu context-path của đích | Ghi đúng giá trị config; nếu link không khớp vì vậy, Gap sẽ hiện ra để DevOps xác nhận, không tự thêm context-path |
+| Base URL của bên gọi thiếu context-path của đích | Ghi đúng giá trị config, không tự thêm context-path. Khi đó `link` thấy lời gọi trúng host/port của đích mà không khớp endpoint nào và sinh Gap `unresolved-call` (askWho=`Dev`, câu hỏi nêu context-path của đích; ruling R20), không biến lời gọi thành ExternalSystem (`../cross-service.md` §2.1 bước 7) |
 | URL ghép chuỗi trong code | `urlTemplate` tốt nhất có thể + `confidence=medium` |
 | Service discovery (`lb://name`, Feign chỉ có `name`) | `discoveryName=name`, khớp theo tên service, không theo host; không cần Gap thiếu base URL |
 | `@FeignClient(path="/v1")` | Cộng `path` vào `urlTemplate` của mọi method |
@@ -196,11 +197,11 @@ Trích đoạn kỳ vọng:
 ```
 Link hai fixture cho `TARGETS {matchedBy:'host+path', confidence:'high'}` từ ClientCall của a-service tới `uat:b-service:endpoint:http:GET /items/{id}` và `SERVICE_DEPENDS_ON` a-service → b-service.
 
-**Rule riêng** (`scripts/core/profile-rules/index.mjs`, chạy bằng `node scripts/validate-bundle.mjs <bundle> --profile spring-boot`):
+**Rule riêng** (`<skill>/scripts/core/profile-rules/index.mjs`, chạy bằng `node <skill>/scripts/validate-bundle.mjs <bundle> --profile spring-boot`):
 | Rule id | Điều kiện | Sửa khi fail |
 |---|---|---|
 | `spring-boot-controller-endpoint` | mọi Component `stereotype=controller` (không external) có ≥1 Operation (qua `CONTAINS`) có `EXPOSES` tới Endpoint | thiếu Endpoint cho `@*Mapping` của controller (§4.1), hoặc thiếu cạnh `CONTAINS` Component → Operation |
 | `spring-boot-clientcall-base-url` | mọi ClientCall `clientKind` ∈ {`feign`, `rest-template`, `web-client`, `rest-client`} có `USES_CONFIG {role:'base-url'}` hoặc `HAS_GAP`; được miễn khi `urlTemplate` là URL tuyệt đối (`scheme://host…`, kể cả `lb://name`), hoặc khi lời gọi chỉ qua discovery (`discoveryName` có giá trị và `baseUrlConfigKey` null, ví dụ Feign chỉ có `name`) | thêm cạnh tới ConfigKey base URL (§4.2), hoặc Gap `missing-config-value`/`unresolved-call` |
 | `spring-boot-server-port` | ConfigKey `server.port` có giá trị số thì `Deployment.port` bằng giá trị đó | sửa `Deployment.port` |
 
-**Test:** `scripts/test/profile-spring.test.mjs` (`npm test` từ thư mục skill): hai bundle kỳ vọng validate sạch với profile `spring-boot`; password bị che `***`; link hai fixture ra `TARGETS host+path`; mỗi rule riêng bắt được lỗi cố ý.
+**Test:** `<skill>/scripts/test/profile-spring.test.mjs` (`npm test` từ thư mục skill): hai bundle kỳ vọng validate sạch với profile `spring-boot`; password bị che `***`; link hai fixture ra `TARGETS host+path`; mỗi rule riêng bắt được lỗi cố ý.
