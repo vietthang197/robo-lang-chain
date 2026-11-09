@@ -28,11 +28,15 @@ public class QdrantConfiguration {
     private Integer qdrantPort;
 
     @Bean
-    public QdrantClient qdrantClient() throws ExecutionException, InterruptedException {
+    public QdrantClient qdrantClient() {
         QdrantGrpcClient.Builder grpcClientBuilder =
                 QdrantGrpcClient.newBuilder(
                         qdrantHost, qdrantPort, false);
-        QdrantClient client = new QdrantClient(grpcClientBuilder.build());
+        return new QdrantClient(grpcClientBuilder.build());
+    }
+
+    @Bean
+    public EmbeddingStore<TextSegment> qdrantEmbeddingStore(QdrantClient client) throws ExecutionException, InterruptedException {
         boolean existsDocument = client.collectionExistsAsync("documents").get();
         if (!existsDocument) {
             client
@@ -41,13 +45,8 @@ public class QdrantConfiguration {
                             Collections.VectorParams.newBuilder().setDistance(Collections.Distance.Cosine).setSize(embeddingModel.dimension()).build())
                     .get();
         }
-        return client;
-    }
-
-    @Bean
-    public EmbeddingStore<TextSegment> qdrantEmbeddingStore() throws ExecutionException, InterruptedException {
         return new QdrantEmbeddingStore(
-                qdrantClient(), "documents", "text_segment"
+                client, "documents", "text_segment"
         );
     }
 }
