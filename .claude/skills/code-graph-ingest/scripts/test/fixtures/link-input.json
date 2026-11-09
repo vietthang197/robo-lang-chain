@@ -50,5 +50,6 @@
     { "projectKey": "b-service", "dataStore": "ds:uat:mongodb:app.items", "mode": "read" }
   ],
   "externals": [],
-  "channels": []
+  "channels": [],
+  "subscriptions": []
 }

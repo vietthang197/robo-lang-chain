@@ -186,11 +186,61 @@ test('manual answer closes the automatic gap as answered', () => {
   assert.equal(node(b, gapUid('ambiguous-target', CALL2)).props.status, 'open');
 });
 
-test('existing manual TARGETS in the DB are kept', () => {
+test('DB manualTargets are informational only: without a gapAnswer the call is matched automatically', () => {
   const inp = input();
   call(inp, PARTNER).manualTargets = [C_EP];
   const t = targets(planLinks(inp, OPTS), PARTNER);
-  assert.deepEqual(t.map((e) => [e.to, e.props.matchedBy]), [[C_EP, 'manual']]);
+  assert.deepEqual(t.map((e) => [e.to, e.props.matchedBy]), [['sys:uat:api.partner.com', 'host']]);
+});
+
+test('manual answer without answer.host adds no host (call resolvedHost is not trusted)', () => {
+  const inp = input();
+  dep(inp, 'c-service').contextPath = '/b';
+  const gapAnswers = [{ env: 'uat', clientCall: CALL1, answer: { targetService: 'c-service' }, answeredBy: 'BA' }];
+  const b = planLinks(inp, { ...OPTS, gapAnswers });
+  assert.equal(targets(b, CALL1)[0].to, C_EP);
+  assert.ok(!b.nodes.some((n) => n.type === 'Deployment'));
+});
+
+test('discovery name beats a port-only medium match and teaches the host', () => {
+  const inp = input();
+  dep(inp, 'b-service').hosts = [];
+  Object.assign(call(inp, CALL1), { discoveryName: 'b-service' });
+  const b = planLinks(inp, OPTS);
+  const t = targets(b, CALL1);
+  assert.deepEqual(t.map((e) => [e.to, e.props.matchedBy, e.props.confidence]), [[B_EP, 'host+path', 'high']]);
+  assert.deepEqual(node(b, 'uat:b-service:deployment').props, { hosts: ['10.1.2.3'] });
+  // without a discovery name the port-only fallback still applies
+  assert.equal(targets(b, CALL2)[0].props.confidence, 'medium');
+});
+
+test('resolvedPath with trailing slash and query matches through the contextPath strip', () => {
+  const inp = input();
+  Object.assign(call(inp, CALL1), { resolvedHost: null, resolvedPort: null, resolvedPath: '/b/items/123/?x=1' });
+  const t = targets(planLinks(inp, OPTS), CALL1);
+  assert.deepEqual(t.map((e) => [e.to, e.props.matchedBy]), [[B_EP, 'path']]);
+});
+
+test('async rollup: kafka producer -> channel -> subscriber service', () => {
+  const inp = input();
+  const P1 = 'uat:a-service:clientcall:com.x.P#send->kafka-producer:payment.created';
+  const P2 = 'uat:a-service:clientcall:com.x.P#resend->kafka-producer:payment.created';
+  const CH = 'ch:uat:kafka:payment.created';
+  inp.channels.push({ uid: CH, tech: 'kafka', name: 'payment.created', env: 'uat' });
+  for (const uid of [P1, P2])
+    inp.clientCalls.push({ uid, projectKey: 'a-service', clientKind: 'kafka-producer', httpMethod: null, urlTemplate: 'payment.created',
+      baseUrlConfigKey: null, resolvedHost: null, resolvedPort: null, resolvedPath: null, discoveryName: null, signature: null,
+      topic: 'payment.created', confidence: 'high', manualTargets: [] });
+  inp.subscriptions = [{ projectKey: 'b-service', channel: CH }, { projectKey: 'a-service', channel: CH }];
+  inp.clientCalls = inp.clientCalls.filter((c) => c.uid !== CALL1 && c.uid !== CALL2);
+  const b = planLinks(inp, OPTS);
+  const deps = b.edges.filter((e) => e.type === 'SERVICE_DEPENDS_ON' && e.to === 'uat:b-service:service:b-service');
+  assert.equal(deps.length, 1);
+  assert.deepEqual(deps[0].props, {
+    protocol: 'kafka', sync: false, endpointsUsed: [CH], callCount: 2, confidence: 'high', derived: true, env: 'uat',
+  });
+  assert.ok(!b.edges.some((e) => e.type === 'SERVICE_DEPENDS_ON' && e.from === e.to));
+  assert.deepEqual(validateBundle(b, { mode: 'link' }).errors, []);
 });
 
 test('rollup', () => {

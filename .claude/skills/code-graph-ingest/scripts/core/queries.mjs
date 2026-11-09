@@ -12,8 +12,9 @@ function envLiteral(env) {
 
 const q = (lines) => lines.join(' ');
 
-// Inputs for link-plan (Task 6). Every ClientCall of the env is returned; manualTargets lists
-// TARGETS {matchedBy:'manual'} already present so link-plan can leave those calls alone.
+// Inputs for link-plan (Task 6). Every ClientCall of the env is returned. manualTargets lists
+// TARGETS {matchedBy:'manual'} already in the DB; it is informational only: catalog gapAnswers
+// is the sole source of manual matches (spec §9), so link-plan ignores it.
 export function linkQueries(env) {
   const e = envLiteral(env);
   return [
@@ -78,6 +79,14 @@ export function linkQueries(env) {
         `MATCH (c:Channel) WHERE c.env = ${e}`,
         'RETURN c.uid AS uid, c.tech AS tech, c.name AS name, c.env AS env',
         'ORDER BY uid',
+      ]),
+    },
+    {
+      name: 'subscriptions',
+      cypher: q([
+        `MATCH (o:CodeNode)-[:SUBSCRIBES]->(c:Channel) WHERE o.env = ${e} AND c.env = ${e}`,
+        'RETURN DISTINCT o.projectKey AS projectKey, c.uid AS channel',
+        'ORDER BY projectKey, channel',
       ]),
     },
   ];

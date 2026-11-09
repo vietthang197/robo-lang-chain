@@ -48,7 +48,6 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
   const deployments = new Map(list('deployments').filter((d) => d?.projectKey).map((d) => [d.projectKey, d]));
   const services = list('services').filter((s) => s?.projectKey);
   const channels = list('channels');
-  const endpointByUid = new Map(endpoints.map((e) => [e.uid, e]));
   const answers = new Map();
   for (const a of gapAnswers ?? [])
     if (a?.env === env && typeof a.clientCall === 'string' && a.answer?.targetService) answers.set(a.clientCall, a);
@@ -108,6 +107,7 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
 
     // Rule 1: host membership (and port when both are known) -> high; a deployment with no hosts
     // yet and the same port -> medium. Either way the path must match after the contextPath strip.
+    let portOnly = null;
     if (host !== null || port !== null) {
       const high = [];
       const medium = [];
@@ -125,7 +125,8 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
       }
       if (high.length === 1) return http(high[0].pk, high[0].ep, 'host+path', 'high');
       if (high.length > 1) return { gap: { kind: 'ambiguous-target', candidates: high.map((x) => candidate(x.pk)) } };
-      if (medium.length === 1) return http(medium[0].pk, medium[0].ep, 'host+path', 'medium');
+      // A port-only medium match is only a fallback: rule 2 (high) is tried first.
+      if (medium.length === 1) portOnly = http(medium[0].pk, medium[0].ep, 'host+path', 'medium');
     }
 
     // Rule 2: discovery name (lb://x, Feign name; also a host that is a service name) = Service.name.
@@ -134,6 +135,7 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
       const hits = matchAll(call, uniqSorted(svc.map((s) => s.projectKey)));
       if (hits.length === 1) return http(hits[0].pk, hits[0].ep, 'host+path', 'high');
     }
+    if (portOnly) return portOnly;
 
     // Rule 3: path only.
     const hits = matchAll(call, projectsWithHttp);
@@ -187,14 +189,13 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
 
   for (const call of [...calls].filter((c) => c?.uid).sort((a, b) => byStr(a.uid, b.uid))) {
     const a = answers.get(call.uid);
-    const kept = (call.manualTargets ?? []).filter((u) => typeof u === 'string' && u !== '');
     if (a) {
       const t = manual(call, a);
       const r = auto(call);
       if (t) {
         target(call, t);
-        const h = a.answer.host ?? (call.clientKind === 'ofs' ? null : call.resolvedHost);
-        if (h != null && lower(h) !== lower(call.discoveryName)) addHost(t.pk, h);
+        // Only the recorded answer.host is trusted; the call's resolvedHost is not (ruling R18).
+        if (a.answer.host != null) addHost(t.pk, a.answer.host);
         if (r.gap) addGap(call, r.gap.kind, r.gap.candidates, questionFor(call, r.gap.kind), {
           status: 'answered', answer: `targetService=${a.answer.targetService}${a.answer.host ? `, host=${a.answer.host}` : ''}`,
           ...(a.answeredBy ? { answeredBy: a.answeredBy } : {}),
@@ -202,13 +203,6 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
       } else {
         addGap(call, 'ambiguous-target', [candidate(a.answer.targetService)],
           `Câu trả lời đã ghi trong gapAnswers (targetService=${a.answer.targetService}) không khớp Endpoint nào cho lời gọi ${describe(call)} từ ${call.projectKey}; lời gọi trỏ tới host/IP nào?`);
-      }
-      continue;
-    }
-    if (kept.length) {
-      for (const uid of uniqSorted(kept)) {
-        const ep = endpointByUid.get(uid);
-        target(call, { uid, matchedBy: 'manual', confidence: 'high', protocol: ep?.protocol ?? (call.clientKind === 'ofs' ? 'ofs' : 'http') });
       }
       continue;
     }
@@ -251,23 +245,34 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
   }
 
   // SERVICE_DEPENDS_ON rollup per (caller service, target service or external system).
+  // Calls to a Channel roll up async (producer -> every subscriber service of that channel).
   const roll = new Map();
-  for (const c of contributions) {
-    const p = parseUid(c.to);
-    let to;
-    if (p.scope === 'project') to = serviceUid(env, p.projectKey);
-    else if (p.group === 'sys') to = c.to;
-    else continue; // channels have no owning service here
-    const from = serviceUid(env, c.call.projectKey);
-    if (from === to) continue;
+  const channelByUid = new Map(channels.filter((c) => c?.uid).map((c) => [c.uid, c]));
+  const subscribers = new Map(); // channel uid -> Set(projectKey)
+  for (const s of list('subscriptions')) {
+    if (!s?.projectKey || !s.channel) continue;
+    if (!subscribers.has(s.channel)) subscribers.set(s.channel, new Set());
+    subscribers.get(s.channel).add(s.projectKey);
+  }
+  const contribute = (from, to, c, protocol, sync) => {
+    if (from === to) return;
     const key = `${from}\u0000${to}`;
     if (!roll.has(key)) roll.set(key, { from, to, protocols: new Set(), sync: false, used: new Set(), calls: new Set(), conf: 'high' });
     const r = roll.get(key);
-    if (c.protocol) r.protocols.add(c.protocol);
-    if (!isProducer(c.call.clientKind)) r.sync = true;
+    if (protocol) r.protocols.add(protocol);
+    if (sync) r.sync = true;
     r.used.add(c.to);
     r.calls.add(c.call.uid);
     if (RANK[c.confidence] < RANK[r.conf]) r.conf = c.confidence;
+  };
+  for (const c of contributions) {
+    const p = parseUid(c.to);
+    const from = serviceUid(env, c.call.projectKey);
+    if (p.scope === 'project') contribute(from, serviceUid(env, p.projectKey), c, c.protocol, !isProducer(c.call.clientKind));
+    else if (p.group === 'sys') contribute(from, c.to, c, c.protocol, !isProducer(c.call.clientKind));
+    else if (p.group === 'ch')
+      for (const pk of [...(subscribers.get(c.to) ?? [])].sort(byStr))
+        contribute(from, serviceUid(env, pk), c, channelByUid.get(c.to)?.tech ?? 'channel', false);
   }
   for (const r of roll.values())
     edges.push({

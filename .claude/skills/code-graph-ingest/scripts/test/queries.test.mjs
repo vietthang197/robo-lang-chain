@@ -22,7 +22,7 @@ for (const env of ['dev', 'uat']) {
 
 test('link query names', () => {
   const n = names(linkQueries('dev'));
-  for (const k of ['clientCalls', 'endpoints', 'deployments', 'services', 'accesses', 'externals', 'channels'])
+  for (const k of ['clientCalls', 'endpoints', 'deployments', 'services', 'accesses', 'externals', 'channels', 'subscriptions'])
     assert.ok(n.includes(k), `missing ${k}`);
   assert.equal(new Set(n).size, n.length);
 });
