@@ -19,6 +19,17 @@ const checkKey = (k, where) => {
   if (!SAFE_IDENT.test(k)) throw new Error(`unsafe property key "${k}" on ${where}`);
 };
 
+// ArcadeDB rejects map-valued properties and lists of maps ("Property values can only be of
+// primitive types or arrays thereof"). Such values (Service.coverage, Gap.candidates, TAGGED
+// attributes, ...) are stored as a JSON string; readers parse them back (report.mjs).
+const isPrimitive = (v) => v === null || ['string', 'number', 'boolean'].includes(typeof v);
+export const storable = (v) =>
+  (v !== null && typeof v === 'object' && (!Array.isArray(v) || !v.every(isPrimitive)) ? JSON.stringify(v) : v);
+const storableProps = (row, skip) => {
+  for (const k of Object.keys(row)) if (!skip.includes(k)) row[k] = storable(row[k]);
+  return row;
+};
+
 // SET list: plain keys sorted, then description before descriptionSource, both guarded so a
 // stored human description is never overwritten.
 function setClause(alias, keys) {
@@ -59,6 +70,7 @@ function nodeRow(node, scan, mode) {
     }
     row.scanId = scan.scanId;
   }
+  storableProps(row, ['uid']);
   const keys = Object.keys(row).filter((k) => k !== 'uid');
   keys.forEach((k) => checkKey(k, where));
   return { row, keys, patch, shared };
@@ -72,6 +84,7 @@ function edgeRow(edge, scan) {
   // scanId (and env for derived edges) come from the scan unless the edge already sets them.
   const row = { from: edge.from, to: edge.to, scanId: scan.scanId, ...props };
   if (row.derived === true && row.env === undefined) row.env = scan.env;
+  storableProps(row, ['from', 'to']);
   const keys = Object.keys(row).filter((k) => k !== 'from' && k !== 'to' && k !== 'scanId');
   keys.forEach((k) => checkKey(k, where));
   return { row, keys };

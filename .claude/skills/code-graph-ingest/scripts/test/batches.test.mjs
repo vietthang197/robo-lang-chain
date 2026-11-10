@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { readJson } from '../core/io.mjs';
-import { toLoadPlan, sharedCleanupStatement, MAX_ROWS, MAX_CHARS } from '../core/batches.mjs';
+import { toLoadPlan, sharedCleanupStatement, storable, MAX_ROWS, MAX_CHARS } from '../core/batches.mjs';
 
 const fixture = () =>
   readJson(fileURLToPath(new URL('./fixtures/valid-min.bundle.json', import.meta.url)));
@@ -259,12 +259,12 @@ test('ingest Service row gets scan.coverage when it has none (R19); link mode un
   const b = fixture();
   const svcStmt = (plan) => plan.find((p) => p.file.endsWith('-nodes-Service')).statement;
   const plan = toLoadPlan(b, { mode: 'ingest' });
-  assert.match(svcStmt(plan), /coverage: \{filesTotal: 34, filesRead: 34, skipped: \[\]\}/);
+  assert.ok(svcStmt(plan).includes(`coverage: '{"filesTotal":34,"filesRead":34,"skipped":[]}'`));
   assert.match(svcStmt(plan), /n\.coverage = r\.coverage/);
   const own = fixture();
   own.nodes.find((n) => n.type === 'Service').props.coverage = { filesTotal: 9, filesRead: 1 };
   const s2 = svcStmt(toLoadPlan(own, { mode: 'ingest' }));
-  assert.match(s2, /coverage: \{filesTotal: 9, filesRead: 1\}/);
+  assert.ok(s2.includes(`coverage: '{"filesTotal":9,"filesRead":1}'`));
   assert.ok(!s2.includes('filesTotal: 34'));
   const none = fixture();
   delete none.scan.coverage;
@@ -272,4 +272,19 @@ test('ingest Service row gets scan.coverage when it has none (R19); link mode un
   // Non-Service nodes never get it.
   for (const p of plan.filter((x) => /-nodes-/.test(x.file) && !x.file.endsWith('-nodes-Service')))
     assert.ok(!p.statement.includes('filesTotal'), p.file);
+});
+
+test('map props and lists of maps are stored as JSON strings (ArcadeDB has no map properties)', () => {
+  assert.equal(storable({ a: 1 }), '{"a":1}');
+  assert.equal(storable([{ a: 1 }]), '[{"a":1}]');
+  assert.deepEqual(storable(['x', 1, true, null]), ['x', 1, true, null]);
+  assert.equal(storable('s'), 's');
+  assert.equal(storable(null), null);
+  const b = fixture();
+  b.edges.push({ type: 'TAGGED', from: b.nodes[0].uid, to: b.nodes[0].uid, props: { attributes: { value: '/x' } } });
+  const plan = toLoadPlan(b, { mode: 'ingest' });
+  const all = plan.map((p) => p.statement ?? '').join('\n');
+  // Row literals start after "[" or ", "; a map assigned to a property would read "key: {".
+  assert.ok(!/\w: \{/.test(all), 'no map literal is assigned as a property value');
+  assert.ok(all.includes(`attributes: '{"value":"/x"}'`));
 });

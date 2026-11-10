@@ -21,7 +21,16 @@ const serviceKey = (s) => str(s?.projectKey ?? s?.name ?? s?.uid);
 const serviceName = (s) => str(s?.name ?? s?.projectKey ?? s?.uid);
 const capabilityNames = (s) =>
   uniq(arr(s?.capabilities).map((c) => (c && typeof c === 'object' ? str(c.name ?? c.uid) : str(c))).filter(Boolean));
-const coverage = (c) =>
+// Service.coverage is stored as a JSON string (ArcadeDB has no map properties, batches.mjs storable).
+const parseJson = (v) => {
+  if (typeof v !== 'string') return v;
+  try { return JSON.parse(v); } catch { return null; }
+};
+const coverage = (raw) => {
+  const c = parseJson(raw);
+  return coverageText(c);
+};
+const coverageText = (c) =>
   c && c.filesRead !== null && c.filesRead !== undefined && c.filesTotal !== null && c.filesTotal !== undefined
     ? `${c.filesRead}/${c.filesTotal}` : '—';
 const depKey = (d) => `${str(d?.from)}→${str(d?.to)}`;

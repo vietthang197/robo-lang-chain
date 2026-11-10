@@ -40,6 +40,13 @@ test('services table has the right columns, capability names and coverage', () =
   assert.ok(line(s, '| pay-svc').trim().endsWith('| — |'), line(s, '| pay-svc'));
 });
 
+test('coverage stored as a JSON string (as ArcadeDB returns it) is parsed', () => {
+  const d = data();
+  for (const s of d.services) if (s.coverage && typeof s.coverage === 'object') s.coverage = JSON.stringify(s.coverage);
+  const s = section(renderReport(d, null, opts), 'Services theo Domain/Layer');
+  assert.match(s, /38\/40/);
+});
+
 test('unclassified service listed under (chưa phân loại)', () => {
   const s = section(renderReport(data(), null, opts), 'Services theo Domain/Layer');
   const misc = line(s, '| misc-svc');
