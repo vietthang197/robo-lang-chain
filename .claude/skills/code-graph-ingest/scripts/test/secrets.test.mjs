@@ -159,3 +159,47 @@ test('R7-config-value: a credential ConfigKey never stores a clear-text value', 
   // ordinary keys are untouched
   assert.deepEqual(errs('server.port', { value: '8080', masked: false }), []);
 });
+
+test('more credential keys: api_key, pwd, bind-pass, signing-key, encryption key', () => {
+  for (const k of ['payment.api_key', 'ldap.pwd', 'ldap.bind-pass', 'spring.ldap.password', 'jwt.signing-key',
+    'app.encryption.key', 'app.apiKey', 'x.api-key'])
+    assert.ok(CREDENTIAL_KEY.test(k), k);
+  for (const k of ['server.port', 'spring.datasource.url', 'app.passthrough.enabled', 'feature.compass-mode', 'spring.application.name'])
+    assert.ok(!CREDENTIAL_KEY.test(k), k);
+  assert.deepEqual(maskConfigValue('payment.api_key', 'abc'), { value: '***', masked: true });
+  assert.deepEqual(maskConfigValue('jwt.signing-key', 'c2VjcmV0'), { value: '***', masked: true });
+});
+
+test('findSecrets: Oracle thin credentials, Bearer tokens and common token formats', () => {
+  const hit = (s, name) => assert.ok(findSecrets(s).includes(name), `${s} -> ${findSecrets(s)}`);
+  hit('jdbc:oracle:thin:SCOTT/tiger@//db.local:1521/ORCL', 'oracle-thin');
+  hit('url = jdbc:oracle:thin:app_user/P@ss@db:1521:ORCL', 'oracle-thin');
+  hit('Gọi API với header Authorization: Bearer abcDEF123456ghiJKL789', 'bearer');
+  hit('key sk-abcdefghijklmnopqrstuvwxyz012345', 'token-format');
+  hit('sk-proj-abcdefghijklmnopqrstuv1234', 'token-format');
+  hit('ghp_abcdefghijklmnopqrstuvwxyz0123456789', 'token-format');
+  hit('xoxb-1234567890-abcdefghij', 'token-format');
+  for (const s of ['jdbc:oracle:thin:@//db.local:1521/ORCL', 'jdbc:oracle:thin:@db:1521:ORCL',
+    'Xác thực bằng Bearer token trong header Authorization', 'Dùng JWT Bearer token của Keycloak để gọi',
+    'risk-assessment-service-name-long', 'Nhập giao dịch qua task-runner', 'http://10.1.2.3:8081/api',
+    'https://github.com/org/repo', 'Kiểm tra mật khẩu người dùng trước khi đăng nhập'])
+    assert.deepEqual(findSecrets(s), [], s);
+});
+
+test('maskConfigValue handles jdbc:<vendor>: URLs', () => {
+  assert.deepEqual(maskConfigValue('spring.datasource.url', 'jdbc:oracle:thin:SCOTT/tiger@//db.local:1521/ORCL'),
+    { value: 'jdbc:oracle:thin:@//db.local:1521/ORCL', masked: true });
+  assert.deepEqual(maskConfigValue('spring.datasource.url', 'jdbc:oracle:thin:app/P@ss@db:1521:ORCL'),
+    { value: 'jdbc:oracle:thin:@db:1521:ORCL', masked: true });
+  assert.deepEqual(maskConfigValue('spring.datasource.url', 'jdbc:oracle:thin:@//db.local:1521/ORCL'),
+    { value: 'jdbc:oracle:thin:@//db.local:1521/ORCL', masked: false });
+  assert.deepEqual(maskConfigValue('spring.datasource.url', 'jdbc:mysql://root:s3cret@db:3306/app?useSSL=false'),
+    { value: 'jdbc:mysql://db:3306/app', masked: true });
+  assert.deepEqual(maskConfigValue('spring.datasource.url', 'jdbc:postgresql://db:5432/app'),
+    { value: 'jdbc:postgresql://db:5432/app', masked: false });
+  assert.deepEqual(maskConfigValue('spring.datasource.url', 'jdbc:sqlserver://db:1433;databaseName=app;user=sa;password=x1'),
+    { value: 'jdbc:sqlserver://db:1433', masked: true });
+  // idempotent on masked output
+  for (const v of ['jdbc:oracle:thin:@//db.local:1521/ORCL', 'jdbc:mysql://db:3306/app', 'jdbc:sqlserver://db:1433'])
+    assert.equal(maskConfigValue('spring.datasource.url', v).value, v);
+});

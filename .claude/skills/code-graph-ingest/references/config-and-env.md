@@ -76,10 +76,10 @@ Một `Deployment` cho mỗi `(env, projectKey)`, uid `<env>:<projectKey>:deploy
 
 ## 4. Secret
 
-- Mẫu key secret: `(?i)(password|passwd|secret|token|apikey|api-key|credential|private|key-store|jaas|uri|url)` (`SECRET_KEY` trong `<skill>/scripts/core/secrets.mjs`; `jaas` bắt `spring.kafka.properties.sasl.jaas.config`).
-- Key credential thật (`password|passwd|secret|token|apikey|api-key|credential|private|key-store|jaas`, `CREDENTIAL_KEY`): **value luôn thay bằng `***`**, `masked=true`, kể cả khi giá trị trông vô hại; default trong placeholder cũng che (`${DB_PASS:***}`, mục 2). Ví dụ `spring.datasource.password: secret` → `value: "***"`, `masked: true`.
-- Key `uri|url`: là URL thì **giữ scheme/host/port/path, bỏ userinfo, query và fragment**; `masked=true` nếu có cắt. Ví dụ `mongodb://app:pw@db1:27017/app_db?authSource=admin` → `mongodb://db1:27017/app_db`. URL không tách được host khỏi credential thì `***`.
-- Key bất kỳ mà value khớp mẫu secret (URL có `user:pass@`, JWT, PEM private key, `password=…`, AWS key) cũng che như trên.
+- Mẫu key secret: `(?i)(password|passwd|pwd|secret|token|api[_-]?key|credential|private|key-store|jaas|signing[_-]?key|encryption|.pass|uri|url)` (`.pass` = `pass` đứng riêng thành một đoạn key như `ldap.bind-pass`, không bắt `passthrough`) (`SECRET_KEY` trong `<skill>/scripts/core/secrets.mjs`; `jaas` bắt `spring.kafka.properties.sasl.jaas.config`).
+- Key credential thật (`password|passwd|pwd|secret|token|api[_-]?key|credential|private|key-store|jaas|signing[_-]?key|encryption|.pass`, `CREDENTIAL_KEY`; vd `payment.api_key`, `ldap.pwd`, `jwt.signing-key`, `app.encryption.key`): **value luôn thay bằng `***`**, `masked=true`, kể cả khi giá trị trông vô hại; default trong placeholder cũng che (`${DB_PASS:***}`, mục 2). Ví dụ `spring.datasource.password: secret` → `value: "***"`, `masked: true`.
+- Key `uri|url`: là URL thì **giữ scheme/host/port/path, bỏ userinfo, query và fragment**; `masked=true` nếu có cắt. Ví dụ `mongodb://app:pw@db1:27017/app_db?authSource=admin` → `mongodb://db1:27017/app_db`. JDBC cũng vậy: `jdbc:mysql://root:pw@db:3306/app` → `jdbc:mysql://db:3306/app`; `jdbc:sqlserver://db:1433;user=sa;password=…` → `jdbc:sqlserver://db:1433` (bỏ `;params`); Oracle thin `jdbc:oracle:thin:USER/PASS@//db:1521/ORCL` → `jdbc:oracle:thin:@//db:1521/ORCL`. URL không tách được host khỏi credential thì `***`.
+- Key bất kỳ mà value khớp mẫu secret (URL có `user:pass@`, Oracle thin `USER/PASS@`, JWT, PEM private key, `password=…`, AWS key, `Bearer <token>`, token dạng `sk-…`/`ghp_…`/`xoxb-…`) cũng che như trên.
 - `${ENV_VAR}` trần không phải secret (giữ nguyên); `${VAR:default}` thì xét phần default.
 - Hàm chuẩn (dùng khi phân vân): `maskConfigValue(key, value)` trong `<skill>/scripts/core/secrets.mjs`:
   ```bash
