@@ -108,9 +108,16 @@ test('studio Endpoint -> DataStore chain starts from the exposing Operation and 
   assert.match(chain.cypher, /OPTIONAL MATCH \(c:Component\)-\[:CONTAINS\]->\(op\)/);
   assert.match(chain.cypher, /\[x IN \[op, c\] WHERE x IS NOT NULL\] AS starts/);
   assert.match(chain.cypher, /UNWIND starts AS s/);
-  assert.match(chain.cypher, /p1 = \(s\)-\[:CALLS\|TRIGGERS\*0\.\.4\]->\(m:CodeNode\)/);
-  // Interface dispatch: CALLS reaches the interface Operation; the implementation OVERRIDES it.
-  assert.match(chain.cypher, /p2 = \(m\)<-\[:OVERRIDES\*0\.\.1\]-\(i:CodeNode\)/);
-  assert.match(chain.cypher, /p3 = \(i\)-\[:CALLS\|TRIGGERS\*0\.\.4\]->\(n:CodeNode\)-\[:ACCESSES\]->\(ds:DataStore\)/);
-  assert.match(chain.cypher, /RETURN ep, op, p1, p2, p3/);
+  // Interface dispatch at every junction: 4 forward CALLS|TRIGGERS segments, 3 reverse OVERRIDES hops.
+  for (const k of [1, 3, 5]) assert.ok(chain.cypher.includes(`p${k} = `) && chain.cypher.includes('-[:CALLS|TRIGGERS*0..3]->'));
+  for (const [k, m, i] of [[2, 'm1', 'i1'], [4, 'm2', 'i2'], [6, 'm3', 'i3']])
+    assert.ok(chain.cypher.includes(`p${k} = (${m})<-[:OVERRIDES*0..1]-(${i}:CodeNode)`), `junction p${k}`);
+  assert.ok(chain.cypher.includes('p7 = (i3)-[:CALLS|TRIGGERS*0..3]->(n:CodeNode)-[:ACCESSES]->(ds:DataStore)'));
+  // CALLS is only ever walked forward: every CALLS pattern is followed by "->".
+  for (const m of chain.cypher.matchAll(/\[:CALLS\|TRIGGERS\*0\.\.3\](..)/g)) assert.equal(m[1], '->');
+  assert.ok(!chain.cypher.includes('<-[:CALLS'), 'CALLS never reversed');
+  assert.match(chain.cypher, /RETURN ep, op, p1, p2, p3, p4, p5, p6, p7 LIMIT 200/);
+  const table = studioQueries('uat').find((q) => q.title === 'Chuỗi Endpoint → DataStore (bảng)');
+  assert.ok(table, 'table chain query missing');
+  assert.match(table.cypher, /RETURN DISTINCT ep.signature AS endpoint, op.qualifiedName AS startOp, ds.uid AS dataStore/);
 });

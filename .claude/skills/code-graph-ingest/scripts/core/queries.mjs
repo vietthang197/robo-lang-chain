@@ -143,10 +143,35 @@ export function reportQueries(env) {
         'OPTIONAL MATCH (n:CodeNode)-[:HAS_GAP]->(g)',
         'WITH g, collect(n.uid) AS attachedUids',
         'RETURN g.uid AS uid, g.kind AS kind, g.askWho AS askWho, g.question AS question,',
+        // candidates comes back as a JSON string (list of maps is stored as JSON, batches.mjs storable).
         'g.status AS status, g.candidates AS candidates, head(attachedUids) AS attached',
         'ORDER BY askWho, kind, uid',
       ]),
     },
+  ];
+}
+
+// Endpoint -> DataStore walk shared by the two chain queries.
+// Ruling R22: start from the exposing Operation AND the Component that CONTAINS it, so hooks
+// triggered from a Component (T24 VERSION -TRIGGERS-> routine) are followed too.
+// Interface dispatch (spring-boot §4.5): CALLS stops at the interface Operation and the
+// implementation reaches it only by OVERRIDES (impl -> iface). Each of the 3 junctions may hop
+// back over one OVERRIDES edge (0..1), so up to 3 interface dispatches are followed, with up to
+// 3 CALLS|TRIGGERS hops per segment (4 segments, at most 12 call hops in total). CALLS is never
+// walked backwards.
+function chainWalk(e) {
+  return [
+    `MATCH (ep:Endpoint)<-[:EXPOSES]-(op:Operation) WHERE ep.env = ${e}`,
+    'OPTIONAL MATCH (c:Component)-[:CONTAINS]->(op)',
+    'WITH ep, op, [x IN [op, c] WHERE x IS NOT NULL] AS starts',
+    'UNWIND starts AS s',
+    'MATCH p1 = (s)-[:CALLS|TRIGGERS*0..3]->(m1:CodeNode)',
+    'MATCH p2 = (m1)<-[:OVERRIDES*0..1]-(i1:CodeNode)',
+    'MATCH p3 = (i1)-[:CALLS|TRIGGERS*0..3]->(m2:CodeNode)',
+    'MATCH p4 = (m2)<-[:OVERRIDES*0..1]-(i2:CodeNode)',
+    'MATCH p5 = (i2)-[:CALLS|TRIGGERS*0..3]->(m3:CodeNode)',
+    'MATCH p6 = (m3)<-[:OVERRIDES*0..1]-(i3:CodeNode)',
+    'MATCH p7 = (i3)-[:CALLS|TRIGGERS*0..3]->(n:CodeNode)-[:ACCESSES]->(ds:DataStore)',
   ];
 }
 
@@ -182,20 +207,18 @@ export function studioQueries(env) {
       ]),
     },
     {
+      // Graph view. LIMIT counts path rows, not (endpoint, datastore) pairs: one pair can come
+      // back as many rows (one per path variant), so a large env may show only part of the chains.
       title: 'Chuỗi Endpoint → DataStore',
+      cypher: q([...chainWalk(e), 'RETURN ep, op, p1, p2, p3, p4, p5, p6, p7 LIMIT 200']),
+    },
+    {
+      // Table view: one row per (endpoint, start operation, datastore).
+      title: 'Chuỗi Endpoint → DataStore (bảng)',
       cypher: q([
-        // Ruling R22: start from the exposing Operation AND the Component that CONTAINS it, so hooks
-        // triggered from a Component (T24 VERSION -TRIGGERS-> routine) are followed too.
-        `MATCH (ep:Endpoint)<-[:EXPOSES]-(op:Operation) WHERE ep.env = ${e}`,
-        'OPTIONAL MATCH (c:Component)-[:CONTAINS]->(op)',
-        'WITH ep, op, [x IN [op, c] WHERE x IS NOT NULL] AS starts',
-        'UNWIND starts AS s',
-        // Interface dispatch (spring-boot §4.5): CALLS stops at the interface Operation; the
-        // implementation reaches it by OVERRIDES, so hop back once and continue from there.
-        'MATCH p1 = (s)-[:CALLS|TRIGGERS*0..4]->(m:CodeNode)',
-        'MATCH p2 = (m)<-[:OVERRIDES*0..1]-(i:CodeNode)',
-        'MATCH p3 = (i)-[:CALLS|TRIGGERS*0..4]->(n:CodeNode)-[:ACCESSES]->(ds:DataStore)',
-        'RETURN ep, op, p1, p2, p3 LIMIT 200',
+        ...chainWalk(e),
+        'RETURN DISTINCT ep.signature AS endpoint, op.qualifiedName AS startOp, ds.uid AS dataStore',
+        'ORDER BY endpoint, startOp, dataStore',
       ]),
     },
     {

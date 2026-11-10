@@ -41,8 +41,10 @@ Các câu Cypher dán vào ArcadeDB Studio (graph view):
 1. Toàn cảnh L1: service và `SERVICE_DEPENDS_ON`.
 2. Theo domain: thay `<domain>` bằng slug (`domain:<slug>`).
 3. Một service từ L1 xuống L2: thay `<projectKey>`; Service → Capability, Deployment → Endpoint.
-4. Chuỗi Endpoint → DataStore: `EXPOSES` ← Operation; điểm xuất phát là **cả** Operation đó **và** Component `CONTAINS` nó (ruling R22), rồi `CALLS|TRIGGERS*0..4` (ruling R21), lùi tối đa một cạnh `OVERRIDES` (gọi qua interface: `CALLS` dừng ở Operation của interface, Operation của `*Impl` `OVERRIDES` nó), tiếp `CALLS|TRIGGERS*0..4` → `ACCESSES` → DataStore. Nhờ vậy hook gắn ở Component (T24 VERSION `-TRIGGERS->` routine) cũng hiện trong chuỗi. Chuỗi đứt thường do vi phạm quy tắc gọi method kế thừa (`schema.md` §6).
+4. Chuỗi Endpoint → DataStore (hai câu: graph view và bảng). Xuất phát từ Operation có `EXPOSES` tới Endpoint **và** Component `CONTAINS` nó (ruling R22), rồi đi tối đa 4 đoạn `CALLS|TRIGGERS*0..3` (ruling R21); giữa hai đoạn được lùi tối đa một cạnh `OVERRIDES` (gọi qua interface: `CALLS` dừng ở Operation của interface, Operation của `*Impl` `OVERRIDES` nó). Như vậy theo được **tối đa 3 lần gọi qua interface** và tối đa 12 bước `CALLS|TRIGGERS`; `CALLS` không bao giờ đi ngược. Chuỗi sâu hơn sẽ không hiện (tăng giới hạn trong `scripts/core/queries.mjs` nếu cần). Hook gắn ở Component (T24 VERSION `-TRIGGERS->` routine) cũng hiện. Câu graph view trả các path và `LIMIT 200` tính theo **dòng path** (một cặp Endpoint/DataStore có thể ra nhiều dòng), nên env lớn có thể chỉ hiện một phần; câu "(bảng)" trả `DISTINCT` (endpoint, startOp, dataStore). Chuỗi đứt thường do vi phạm quy tắc gọi method kế thừa (`schema.md` §6).
 5. Gap đang mở và node gắn Gap.
+
+Lưu ý khi đọc kết quả trong Studio: prop dạng map/list-of-map (`Service.coverage`, `Gap.candidates`, `TAGGED.attributes`) là chuỗi JSON (`schema.md` §3).
 
 ## 4. Sau khi review
 

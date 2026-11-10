@@ -151,6 +151,7 @@ node <skill>/scripts/bundle-to-cypher.mjs bundle.json load-batches            # 
 - Lệnh ghi `load-batches/NNN-*.cypher` và `plan.json` (`[{file, language, expectNodes?}]`). Gửi từng file **theo đúng thứ tự trong `plan.json`** qua MCP ArcadeDB (`language` = `sqlscript` cho `000-schema`, `cypher` cho phần còn lại).
 - Mỗi lô ≤ 300 dòng **và** ≤ 200 000 ký tự Cypher (script tự chia).
 - Kết quả `990-count` phải bằng `expectNodes` trong `plan.json` (số node thuộc project, **gồm cả Gap của project**), **không** so với tổng số node của bundle (bundle còn chứa node dùng chung `ext:`/`lib:`/`tag:`/`ds:`/`env:`… không mang projectKey).
+- Trong DB, prop dạng map và list-of-map (`Service.coverage`, `Gap.candidates`, `TAGGED.attributes`, …) là **chuỗi JSON** (ArcadeDB không nhận map); đọc ra thì parse lại (`schema.md` §3). Bundle vẫn ghi chúng dạng object.
 - Lô nào lỗi thì dừng, **không** chạy cleanup; chạy lại tiếp từ lô lỗi.
 - Uid `ext:` phải cùng loại vertex ở mọi project (xem `schema.md` §2.1), nếu không unique index từ chối cả lô.
 - Sau mỗi ingest phải chạy lại `link --env <env>` (xem `cross-service.md`).

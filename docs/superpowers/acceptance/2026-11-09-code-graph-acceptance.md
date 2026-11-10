@@ -26,7 +26,7 @@
 
 Thành phần bundle: Service 1, Deployment 1 (port 8080 mặc định, contextPath null, profilesActive [dev]), Environment/Domain/Layer 1/1/1, Module 12, Component 47 (13 `ext:`), Operation 47 (11 `ext:`), Member 45, Bean 30, Endpoint 6 (3 http + 3 `langchain4j-tool`), Capability 3, ClientCall 8 (5 Ollama, 3 MCP stdio), ConfigKey 11, DataStore 4, Library 16, Tag 16, Gap 8 (`unresolved-call`, askWho Dev).
 
-Secret: `spring.data.mongodb.uri` lưu thành `mongodb://91.230.110.80:27017/app_db` (`masked: true`, bỏ userinfo và query); grep bundle không còn userinfo/`authSource`. `RoboLangChainApplication.java` trên `master` không in credential (bản sửa in credential chỉ nằm trong working copy chưa commit của người dùng, không được scan).
+Secret: `spring.data.mongodb.uri` lưu thành `mongodb://<mongo-host>:27017/app_db` (`masked: true`, bỏ userinfo và query); grep bundle không còn userinfo/`authSource`. `RoboLangChainApplication.java` trên `master` không in credential (bản sửa in credential chỉ nằm trong working copy chưa commit của người dùng, không được scan).
 
 ## 3. Câu hỏi BA (spec §13.3): từ path `/document/rag/process/{documentId}`
 

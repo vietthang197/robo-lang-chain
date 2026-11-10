@@ -75,6 +75,8 @@ Tài liệu này là **nguồn chuẩn** cho mọi node, edge, thuộc tính và
 | `embedding` | để trống (thuộc sub-project GraphRAG) |
 | `scanId`, `env`, `projectKey` | **không ghi**; writer tự điền |
 
+**Prop dạng map trong DB:** ArcadeDB chỉ nhận giá trị nguyên thuỷ hoặc mảng nguyên thuỷ. Trong bundle các prop map hoặc list-of-map (`Service.coverage`, `Gap.candidates`, `TAGGED.attributes`, …) vẫn là object; khi nạp, writer (`bundle-to-cypher`, hàm `storable`) ghi chúng thành **chuỗi JSON**. Ai đọc từ DB (report, câu query Studio, agent SA) phải `JSON.parse` các prop này.
+
 ---
 
 ## 4. Vertex theo tầng
@@ -168,7 +170,7 @@ Tài liệu này là **nguồn chuẩn** cho mọi node, edge, thuộc tính và
 | `OVERRIDES` | Operation → Operation | | L3 |
 | `EXTENDS` / `IMPLEMENTS` | Component → Component | typeArgs | L3 |
 | `USES_TYPE` | Operation/Component → Component | role (`param`, `return`, `field`, `type-arg`) | L3 |
-| `TAGGED` | * → Tag | attributes (map) | L3 |
+| `TAGGED` | * → Tag | attributes (map; lưu trong DB dạng chuỗi JSON, §3) | L3 |
 | `DEPENDS_ON` | Service → Library | version, scope, transitive, via | L3 |
 | `FROM_LIBRARY` | Component(ext) → Library | inferred | L3 |
 | `HAS_GAP` | * → Gap | | xuyên tầng |
