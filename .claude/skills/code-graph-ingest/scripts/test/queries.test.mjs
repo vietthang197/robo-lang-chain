@@ -41,7 +41,9 @@ test('channels returns uid, tech, name, env', () => {
 
 test('report query names and gaps attached uid via HAS_GAP', () => {
   const qs = reportQueries('uat');
-  assert.deepEqual(names(qs), ['services', 'dependencies', 'dataOwnership', 'gaps']);
+  assert.deepEqual(names(qs), ['services', 'dependencies', 'dataOwnership', 'gaps', 'endpoints']);
+  const eps = qs.find((x) => x.name === 'endpoints').cypher;
+  for (const f of ['projectKey', 'uid', 'signature', 'httpMethod', 'path', 'protocol']) assert.match(eps, new RegExp(`AS ${f}\\b`), f);
   const gaps = qs.find((x) => x.name === 'gaps').cypher;
   assert.match(gaps, /HAS_GAP\]->\(g\)/);
   assert.match(gaps, /AS attached\b/);

@@ -1,5 +1,5 @@
 // Cross-service link plan (spec §7.2): ClientCall -> Endpoint/ExternalSystem/Channel matching,
-// Gaps for what cannot be decided, Deployment.hosts patches and L1 rollups.
+// Gaps for what cannot be decided, Deployment.linkedHosts patches and L1 rollups.
 // Output is a link bundle (scan.projectKey '__system__') loaded with bundle-to-cypher --mode link.
 import { createHash } from 'node:crypto';
 import { SCHEMA_VERSION } from './model.mjs';

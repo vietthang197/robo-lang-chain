@@ -59,10 +59,12 @@ test('table cells escape pipes and newlines', () => {
   assert.match(s, /Quản lý đơn hàng \\\| tạo và hủy<br>dòng hai/);
 });
 
-test('matrix cell shows protocol×callCount, endpoint count, async and low-confidence markers', () => {
+test('matrix cell shows protocol×callCount, endpoint count, async, medium (~) and low (?) markers', () => {
   const s = section(renderReport(data(), null, opts), 'Phụ thuộc');
   assert.equal(line(s, '| Caller'), '| Caller | ext:bank | ext:smtp | pay-svc |');
-  assert.equal(line(s, '| order-svc'), '| order-svc |  | channel,http×2 (async) | http×3 · 1 ep |');
+  assert.equal(line(s, '| order-svc'), '| order-svc |  | channel,http×2 (async)~ | http×3 · 1 ep |');
+  assert.match(s, /`~` = confidence medium/);
+  assert.match(s, /`\?` = confidence low/);
   assert.equal(line(s, '| pay-svc'), '| pay-svc | http×1? |  |  |');
   const d = data();
   Object.assign(d.dependencies[1], { endpointsUsed: ['a', 'b'], confidence: 'low' });
@@ -168,4 +170,24 @@ test('CLI writes report and studio-queries.md, exits 2 on bad usage, 1 on error'
   assert.equal(bad.status, 2);
   const missing = spawnSync(process.execPath, [CLI, join(dir, 'nope.json'), out, '--env', 'uat'], { encoding: 'utf8' });
   assert.equal(missing.status, 1);
+});
+
+test('diff section lists new and lost endpoints (spec §7.3)', () => {
+  const now = data();
+  now.endpoints = [
+    { projectKey: 'order-svc', uid: 'uat:order-svc:endpoint:http:POST /orders', protocol: 'http', signature: 'POST /orders', httpMethod: 'POST', path: '/orders' },
+    { projectKey: 't24', uid: 'uat:t24:endpoint:ofs:FUNDS.TRANSFER,ACTR', protocol: 'ofs', signature: 'FUNDS.TRANSFER,ACTR' },
+  ];
+  const prev = data();
+  prev.endpoints = [
+    { projectKey: 'order-svc', uid: 'uat:order-svc:endpoint:http:POST /orders', protocol: 'http', signature: 'POST /orders' },
+    { projectKey: 'order-svc', uid: 'uat:order-svc:endpoint:http:DELETE /orders/{id}', protocol: 'http', signature: null, httpMethod: 'DELETE', path: '/orders/{id}' },
+  ];
+  const s = section(renderReport(now, prev, opts), 'Thay đổi so với lần trước');
+  assert.match(s, /### Endpoint mới\n\n- t24: ofs FUNDS\.TRANSFER,ACTR\n/);
+  assert.match(s, /### Endpoint bị mất\n\n- order-svc: http DELETE \/orders\/\{id\}\n/);
+  assert.ok(!/POST \/orders/.test(s));
+  // a previous report-data without endpoints (older format) is not diffed on endpoints
+  delete prev.endpoints;
+  assert.ok(!section(renderReport(now, prev, opts), 'Thay đổi so với lần trước').includes('Endpoint'));
 });

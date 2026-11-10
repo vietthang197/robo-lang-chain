@@ -258,7 +258,7 @@ Cú pháp: `report --env <env>`. Chỉ đọc DB. Chạy sau `link`. **Đọc:**
    cd <skill>
    node scripts/print-queries.mjs report --env <env>
    ```
-   (`services`, `dependencies`, `dataOwnership`, `gaps`). Chạy từng câu bằng `mcp__arcadedb__query` (`database: "CodeGraph"`, `language: "cypher"`, `limit: 100000`); ghi `<workspace>/<env>/report-data.json` = `{ "<name>": <records> }` (ghi đè, không sửa tay).
+   (`services`, `dependencies`, `dataOwnership`, `gaps`, `endpoints`). Chạy từng câu bằng `mcp__arcadedb__query` (`database: "CodeGraph"`, `language: "cypher"`, `limit: 100000`); ghi `<workspace>/<env>/report-data.json` = `{ "<name>": <records> }` (ghi đè, không sửa tay).
 3. Dựng report (bỏ `--prev` nếu chưa có `report-data.prev.json`):
    ```bash
    node scripts/make-report.mjs <workspace>/<env>/report-data.json <workspace>/<env>/topology-report.md --env <env> --prev <workspace>/<env>/report-data.prev.json

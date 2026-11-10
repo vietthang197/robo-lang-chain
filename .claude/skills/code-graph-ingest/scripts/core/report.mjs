@@ -75,13 +75,14 @@ function serviceCard(s, name, domain) {
   return out;
 }
 
-// <protocol>×<callCount>[ · <N> ep][ (async)][?]  (? = low confidence)
+// <protocol>×<callCount>[ · <N> ep][ (async)][~|?]  (~ = medium confidence, ? = low confidence)
 function matrixCell(d) {
   const eps = arr(d?.endpointsUsed).length;
   let c = `${str(d?.protocol) || '?'}×${d?.callCount ?? 0}`;
   if (eps) c += ` · ${eps} ep`;
   if (d?.sync === false) c += ' (async)';
-  if (d?.confidence === 'low') c += '?';
+  if (d?.confidence === 'medium') c += '~';
+  else if (d?.confidence === 'low') c += '?';
   return c;
 }
 
@@ -96,7 +97,9 @@ function dependencySection(deps) {
     cells.set(k, [...(cells.get(k) ?? []), matrixCell(d)]);
   }
   const rows = callers.map((c) => [c, ...targets.map((t) => sorted(cells.get(`${c}→${t}`) ?? []).join('; '))]);
-  return [...out, ...table(['Caller', ...targets], rows)];
+  return [...out, ...table(['Caller', ...targets], rows), '',
+    'Chú thích: `giao thức×số lời gọi`, `· N ep` = số endpoint dùng, `(async)` = bất đồng bộ, ' +
+    '`~` = confidence medium (khớp chỉ theo path hoặc chỉ theo port, cần kiểm chứng), `?` = confidence low.'];
 }
 
 function dataSection(stores) {
@@ -143,6 +146,12 @@ function capabilityPairs(services, keep) {
   return pairs;
 }
 
+// "<projectKey>: <protocol> <signature>" (signature falls back to "<method> <path>", then the uid).
+const endpointKey = (e) => {
+  const sig = str(e?.signature) || [e?.httpMethod, e?.path].filter(Boolean).map(str).join(' ') || str(e?.uid);
+  return `${str(e?.projectKey)}: ${[str(e?.protocol), sig].filter(Boolean).join(' ')}`;
+};
+
 function diffSection(data, prev) {
   const out = ['## Thay đổi so với lần trước', ''];
   if (!prev) return [...out, 'Lần đầu tạo report'];
@@ -160,6 +169,12 @@ function diffSection(data, prev) {
     ['Phụ thuộc bị mất', added(oldDep, nowDep)],
     ['Capability mới', added(nowCap, oldCap)],
     ['Capability bị mất', added(oldCap, nowCap)],
+    // An older report-data.json without endpoints is not diffed on endpoints.
+    ...(Array.isArray(prev.endpoints) ? (() => {
+      const nowEp = new Set(arr(data.endpoints).map(endpointKey));
+      const oldEp = new Set(arr(prev.endpoints).map(endpointKey));
+      return [['Endpoint mới', added(nowEp, oldEp)], ['Endpoint bị mất', added(oldEp, nowEp)]];
+    })() : []),
   ].filter(([, items]) => items.length);
   if (!parts.length) return [...out, 'Không có thay đổi.'];
   for (const [title, items] of parts) out.push(`### ${title}`, '', ...items.map((i) => `- ${i}`), '');
@@ -167,7 +182,7 @@ function diffSection(data, prev) {
 }
 
 /**
- * @param {object} data report-data.json ({services, dependencies, dataOwnership, gaps})
+ * @param {object} data report-data.json ({services, dependencies, dataOwnership, gaps, endpoints})
  * @param {object|null} prev previous report-data.json, or null for the first report
  * @param {{env: string, generatedAt?: string}} opts
  * @returns {string} markdown

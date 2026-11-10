@@ -150,6 +150,16 @@ export function reportQueries(env) {
         'ORDER BY askWho, kind, uid',
       ]),
     },
+    {
+      // For the "Endpoint mới / Endpoint bị mất" diff (spec §7.3).
+      name: 'endpoints',
+      cypher: q([
+        `MATCH (n:Endpoint) WHERE n.env = ${e}`,
+        'RETURN n.projectKey AS projectKey, n.uid AS uid, n.protocol AS protocol, n.signature AS signature,',
+        'n.httpMethod AS httpMethod, n.path AS path',
+        'ORDER BY projectKey, uid',
+      ]),
+    },
   ];
 }
 
