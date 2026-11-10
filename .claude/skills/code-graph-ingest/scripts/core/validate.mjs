@@ -1,7 +1,7 @@
 // General bundle validation (spec §10) plus the per-profile rule hook.
 import { SCHEMA_VERSION, ENVS, VERTEX_TYPES, EDGE_TYPES, GAP_KINDS } from './model.mjs';
 import { checkUid, isShared, parseUid } from './uid.mjs';
-import { findSecrets, CREDENTIAL_KEY } from './secrets.mjs';
+import { findSecrets, maskConfigValue, CREDENTIAL_KEY, SECRET_KEY } from './secrets.mjs';
 import { profileRules } from './profile-rules/index.mjs';
 
 const SYSTEM_SCAN = '__system__';
@@ -116,6 +116,10 @@ function onePlaceholder(s) {
 // A credential default may only be empty, masked, or exactly one placeholder; that placeholder's
 // own default is collected and judged separately by placeholderDefaults.
 const safeDefault = (d) => d === '' || d === '***' || onePlaceholder(d);
+// Values a credential ConfigKey may store besides null/''/***: ${VAR} or ${VAR:***}.
+const SAFE_CREDENTIAL_VALUE = /^\$\{[^}:]+(?::\*\*\*)?\}$/;
+const configKeyOf = (k) => (typeof k.props?.key === 'string'
+  ? k.props.key : k.uid.slice(k.uid.indexOf(':config:') + ':config:'.length));
 
 // Calls visit(path, string) for every string value nested in value.
 function walkStrings(value, path, visit) {
@@ -225,12 +229,31 @@ export function validateBundle(bundle, options = {}) {
   // cannot see one inside ${DB_PASS:s3cr3t}. Nested defaults are collected by placeholderDefaults.
   for (const k of ofType('ConfigKey')) {
     const p = k.props ?? {};
-    const key = typeof p.key === 'string' ? p.key : k.uid.slice(k.uid.indexOf(':config:') + ':config:'.length);
+    const key = configKeyOf(k);
     if (!CREDENTIAL_KEY.test(key)) continue;
     if (typeof p.placeholderExpr === 'string' && !placeholderDefaults(p.placeholderExpr).every(safeDefault))
       err('R7-config-default', 'placeholderExpr of a credential key must mask its default as ${VAR:***}', k.uid);
     if (p.defaultValue !== undefined && p.defaultValue !== null && p.defaultValue !== '***')
       err('R7-config-default', 'defaultValue of a credential key must be absent or ***', k.uid);
+  }
+
+  // R7-config-value: findSecrets cannot tell that a bare `Hunter2024` is a password; the key can.
+  // A credential key stores only null, '', *** (with masked:true), ${VAR} or ${VAR:***}. A url/uri
+  // key stores its value already masked (maskConfigValue leaves a masked value unchanged).
+  for (const k of ofType('ConfigKey')) {
+    const p = k.props ?? {};
+    const key = configKeyOf(k);
+    const v = p.value;
+    if (CREDENTIAL_KEY.test(key)) {
+      if (v === undefined || v === null || v === '') continue;
+      if (v === '***') {
+        if (p.masked !== true) err('R7-config-value', 'credential key with value *** must have masked:true', k.uid);
+      } else if (typeof v !== 'string' || !SAFE_CREDENTIAL_VALUE.test(v)) {
+        err('R7-config-value', 'value of a credential key must be null, "", ***, ${VAR} or ${VAR:***}', k.uid);
+      }
+    } else if (SECRET_KEY.test(key) && typeof v === 'string' && maskConfigValue(key, v).value !== v) {
+      err('R7-config-value', 'value of a url/uri key must be stored masked (no userinfo, query or fragment)', k.uid);
+    }
   }
 
   // Warnings.

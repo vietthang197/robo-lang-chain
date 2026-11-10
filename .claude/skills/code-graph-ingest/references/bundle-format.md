@@ -138,6 +138,7 @@ Gap trong bundle ingest luôn dùng `gap:<env>:<projectKey>:…` (**ruling R12**
 | `R6-description-evidence` / `R6-required-description` | có `description` thì phải có `evidence[]` + `confidence`; Component `controller`/`service`, Endpoint, Capability (không external) bắt buộc có description |
 | `R7-secret` | không chuỗi nào khớp mẫu secret (URL có userinfo, JWT, PEM, `password=…`, AWS key) |
 | `R7-config-default` | ConfigKey có key credential (`password|passwd|secret|token|apikey|api-key|credential|private|key-store|jaas`): default trong `placeholderExpr` phải là `***`, rỗng hoặc placeholder khác; `defaultValue` bỏ hoặc `***` |
+| `R7-config-value` | ConfigKey có key credential: `value` chỉ được là null, `""`, `***` (kèm `masked:true`), `${VAR}` hoặc `${VAR:***}` (`value: "Hunter2024"` là fail dù mẫu secret không nhận ra); key `url`/`uri`: `value` phải đã che sẵn (bằng kết quả `maskConfigValue`) |
 | `<profile>-…` | rule riêng của profile, xem mục 8 của profile |
 | `W-*` | cảnh báo, không fail: độ phủ < 95%, Operation không ai gọi và không phải entry, Capability chỉ có 1 Endpoint |
 

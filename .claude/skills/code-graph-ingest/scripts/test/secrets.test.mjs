@@ -132,3 +132,30 @@ test('findSecrets flags an OFS request carrying user/password (ofs-credential)',
   miss('FUNDS.TRANSFER,ACTR/I/PROCESS,***/***,FT123');
   miss('http://10.1.2.3:8081/b/items/{id}');
 });
+
+test('R7-config-value: a credential ConfigKey never stores a clear-text value', () => {
+  const base = structuredClone(readJson(fileURLToPath(new URL('./fixtures/valid-min.bundle.json', import.meta.url))));
+  const errs = (key, props) => {
+    const b = structuredClone(base);
+    const uid = `uat:robo-lang-chain:config:${key}`;
+    b.nodes.push({ type: 'ConfigKey', uid, props: { key, ...props } });
+    b.edges.push({ type: 'CONTAINS', from: 'uat:robo-lang-chain:service:robo-lang-chain', to: uid, props: {} });
+    return validateBundle(b).errors.filter((e) => e.rule === 'R7-config-value');
+  };
+  // findSecrets alone misses a bare value.
+  assert.deepEqual(findSecrets('Hunter2024'), []);
+  assert.equal(errs('spring.datasource.password', { value: 'Hunter2024', masked: false }).length, 1);
+  assert.equal(errs('app.client-secret', { value: 'abc', masked: true }).length, 1);
+  assert.equal(errs('spring.datasource.password', { value: '***', masked: false }).length, 1);
+  assert.equal(errs('spring.datasource.password', { value: '${DB_PASS:hunter22}', masked: false }).length, 1);
+  for (const value of [null, undefined, '', '***', '${DB_PASS}', '${DB_PASS:***}'])
+    assert.deepEqual(errs('spring.datasource.password', { value, masked: value === '***' }), [], String(value));
+  // url/uri keys: the value must already be masked.
+  assert.equal(errs('spring.data.mongodb.uri', { value: 'mongodb://u:p@h:27017/db', masked: false }).length, 1);
+  assert.equal(errs('b-service.url', { value: 'http://h:8080/api?token=x', masked: false }).length, 1);
+  assert.deepEqual(errs('spring.data.mongodb.uri', { value: 'mongodb://h:27017/db', masked: true }), []);
+  assert.deepEqual(errs('b-service.url', { value: 'http://10.1.2.3:8081/b', masked: false }), []);
+  assert.deepEqual(errs('b-service.url', { value: 'http://${B_HOST:localhost}:8081/b', masked: false }), []);
+  // ordinary keys are untouched
+  assert.deepEqual(errs('server.port', { value: '8080', masked: false }), []);
+});
