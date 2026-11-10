@@ -121,3 +121,8 @@ test('studio Endpoint -> DataStore chain starts from the exposing Operation and 
   assert.ok(table, 'table chain query missing');
   assert.match(table.cypher, /RETURN DISTINCT ep.signature AS endpoint, op.qualifiedName AS startOp, ds.uid AS dataStore/);
 });
+
+test('deployments returns hosts and linkedHosts (link-learned hosts, never written by ingest)', () => {
+  const q = linkQueries('uat').find((x) => x.name === 'deployments').cypher;
+  assert.ok(q.includes('d.hosts AS hosts') && q.includes('d.linkedHosts AS linkedHosts'), q);
+});

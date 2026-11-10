@@ -132,7 +132,7 @@ test('spring client rule exempts absolute URLs and discovery-only calls', () => 
 test('link records the caller host on the target deployment', () => {
   const link = planLinks(linkInput([loadA(), loadB()]), { env: 'uat', scanId: 'uat-link-20261110T000000Z', gapAnswers: [] });
   const dep = link.nodes.find((n) => n.uid === 'uat:b-service:deployment');
-  assert.deepEqual(dep?.props.hosts, ['10.1.2.3']);
+  assert.deepEqual(dep?.props.linkedHosts, ['10.1.2.3']);
 });
 
 test('spring rule catches server.port not reflected in Deployment.port', () => {

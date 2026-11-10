@@ -68,7 +68,7 @@ Một `Deployment` cho mỗi `(env, projectKey)`, uid `<env>:<projectKey>:deploy
 |---|---|
 | `port` | `server.port` đã giải (số nguyên); Spring mặc định `8080` khi không khai báo. Rule `spring-boot-server-port`: ConfigKey `server.port` có giá trị số thì `Deployment.port` phải bằng nó. Cạnh `USES_CONFIG {role:'port'}` |
 | `contextPath` | `server.servlet.context-path` (Spring Boot 2+; bản cũ `server.context-path`, WebFlux `spring.webflux.base-path`); `null` nếu không có. Cạnh `USES_CONFIG {role:'context-path'}` |
-| `hosts[]` | host/IP của chính service ở env này nếu config/repo ghi rõ (ví dụ manifest k8s, `eureka.instance.hostname`); thường để `[]`. `link` điền thêm từ `resolvedHost` của các lời gọi đã khớp chắc chắn và từ `gapAnswers.answer.host` |
+| `hosts[]` | host/IP của chính service ở env này nếu config/repo ghi rõ (ví dụ manifest k8s, `eureka.instance.hostname`); thường để `[]`. `link` không sửa `hosts` mà ghi host học được (từ `resolvedHost` của các lời gọi đã khớp chắc chắn và từ `gapAnswers.answer.host`) vào prop riêng `linkedHosts`, ingest không ghi prop này |
 | `branch`, `commitSha` | từ pha 0 |
 | `profilesActive[]` | profile đã dùng để giải config |
 

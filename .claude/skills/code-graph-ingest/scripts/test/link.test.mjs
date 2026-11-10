@@ -51,12 +51,11 @@ test('port-only match when the deployment has no hosts yet is host+path/medium (
   assert.equal(t[0].props.confidence, 'medium');
 });
 
-test('known hosts without the call host: no host match; context-path strip still yields one path candidate', () => {
+test('known call host that no deployment has: no path-only match, the call is external (finding 10)', () => {
   const inp = input();
   dep(inp, 'b-service').hosts = ['10.9.9.9'];
   const t = targets(planLinks(inp, OPTS), CALL1);
-  assert.equal(t[0].to, B_EP);
-  assert.deepEqual([t[0].props.matchedBy, t[0].props.confidence], ['path', 'medium']);
+  assert.deepEqual(t.map((e) => [e.to, e.props.matchedBy, e.props.confidence]), [['sys:uat:10.1.2.3', 'host', 'medium']]);
 });
 
 test('context path: call path not under contextPath is not a candidate', () => {
@@ -162,7 +161,7 @@ test('manual answer wins', () => {
   assert.equal(targets(b, CALL2)[0].to, B_EP);
   // answer.host (not the call host) lands in c's deployment hosts
   assert.deepEqual(node(b, 'uat:c-service:deployment'),
-    { type: 'Deployment', uid: 'uat:c-service:deployment', props: { hosts: ['10.9.9.9'] } });
+    { type: 'Deployment', uid: 'uat:c-service:deployment', props: { linkedHosts: ['10.9.9.9'] } });
   assert.deepEqual(validateBundle(b, { mode: 'link' }).errors, []);
 });
 
@@ -209,9 +208,9 @@ test('discovery name beats a port-only medium match and teaches the host', () =>
   const b = planLinks(inp, OPTS);
   const t = targets(b, CALL1);
   assert.deepEqual(t.map((e) => [e.to, e.props.matchedBy, e.props.confidence]), [[B_EP, 'host+path', 'high']]);
-  assert.deepEqual(node(b, 'uat:b-service:deployment').props, { hosts: ['10.1.2.3'] });
-  // without a discovery name the port-only fallback still applies
-  assert.equal(targets(b, CALL2)[0].props.confidence, 'medium');
+  assert.deepEqual(node(b, 'uat:b-service:deployment').props, { linkedHosts: ['10.1.2.3'] });
+  // the host learned from CALL1 is used in the same run (fixpoint): CALL2 is now a host match
+  assert.deepEqual(targets(b, CALL2).map((e) => [e.to, e.props.confidence]), [[B_EP, 'high']]);
 });
 
 test('resolvedPath with trailing slash and query matches through the contextPath strip', () => {
@@ -368,4 +367,42 @@ test('port near-miss needs a hostless deployment or an unknown call host', () =>
   b = planLinks(inp3, OPTS);
   assert.deepEqual(targets(b, PARTNER), []);
   assert.equal(node(b, gapUid('unresolved-call', PARTNER))?.props.candidates[0].projectKey, 'b-service');
+});
+
+test('a partner host never path-matches an internal endpoint (finding 10)', () => {
+  const inp = input();
+  Object.assign(call(inp, PARTNER), { urlTemplate: 'http://api.partner.com/b/items/{id}', resolvedPath: '/b/items/{id}' });
+  const b = planLinks(inp, OPTS);
+  assert.deepEqual(targets(b, PARTNER).map((e) => e.to), ['sys:uat:api.partner.com']);
+  // a host that is a service name, or a loopback host, may still use the path rule
+  const loop = input();
+  Object.assign(call(loop, PARTNER), { urlTemplate: 'http://localhost/b/items/{id}', resolvedHost: 'localhost', resolvedPath: '/b/items/{id}' });
+  assert.deepEqual(targets(planLinks(loop, OPTS), PARTNER).map((e) => [e.to, e.props.matchedBy]), [[B_EP, 'path']]);
+});
+
+test('learned hosts go to linkedHosts and are used in the same run (fixpoint)', () => {
+  const inp = input();
+  dep(inp, 'b-service').hosts = [];
+  // CALL2 (sorted after CALL1) is the one that teaches the host through its discovery name
+  Object.assign(call(inp, CALL2), { discoveryName: 'b-service' });
+  const b = planLinks(inp, OPTS);
+  assert.deepEqual(targets(b, CALL1).map((e) => [e.to, e.props.matchedBy, e.props.confidence]), [[B_EP, 'host+path', 'high']]);
+  assert.deepEqual(node(b, 'uat:b-service:deployment').props, { linkedHosts: ['10.1.2.3'] });
+  assert.ok(!b.nodes.some((n) => n.type === 'Deployment' && 'hosts' in n.props));
+});
+
+test('link is idempotent: re-running on input with the applied linkedHosts gives the same TARGETS', () => {
+  const inp = input();
+  dep(inp, 'b-service').hosts = [];
+  Object.assign(call(inp, CALL2), { discoveryName: 'b-service' });
+  const b1 = planLinks(inp, OPTS);
+  const applied = structuredClone(inp);
+  for (const n of b1.nodes.filter((x) => x.type === 'Deployment'))
+    Object.assign(applied.deployments.find((d) => d.uid === n.uid), n.props);
+  // the next ingest resets hosts to [] but never touches linkedHosts
+  dep(applied, 'b-service').hosts = [];
+  const b2 = planLinks(applied, OPTS);
+  const tg = (b) => b.edges.filter((e) => e.type === 'TARGETS');
+  assert.deepEqual(tg(b2), tg(b1));
+  assert.ok(!b2.nodes.some((n) => n.type === 'Deployment'), 'no further host patch');
 });

@@ -93,7 +93,7 @@ Tài liệu này là **nguồn chuẩn** cho mọi node, edge, thuộc tính và
 | Vertex | Thuộc tính riêng | Ghi chú |
 |---|---|---|
 | `Service` | summary, responsibilities[], notResponsibleFor[], businessTerms[], techStack[], ownerTeam, readerProfiles[], repoUrl, coverage {filesRead, filesTotal} | thẻ service, nút đầu tiên agent SA đọc. `coverage` **không cần ghi**: writer chép từ `scan.coverage` |
-| `Deployment` | port, contextPath, hosts[], branch, commitSha, profilesActive[] | một Service chạy ở một env. `contextPath` lấy từ `server.servlet.context-path` (ruling R16); `hosts[]` để `[]` lúc ingest nếu config của chính service không cho biết, `link` sẽ điền |
+| `Deployment` | port, contextPath, hosts[], linkedHosts[], branch, commitSha, profilesActive[] | một Service chạy ở một env. `contextPath` lấy từ `server.servlet.context-path` (ruling R16); `hosts[]` do ingest ghi (để `[]` nếu config của chính service không cho biết); `linkedHosts[]` **chỉ do `link` ghi** (host học từ lời gọi khớp high và `gapAnswers.answer.host`), ingest không bao giờ ghi nên không bị reset; link coi host đã biết = `hosts` ∪ `linkedHosts` |
 | `Capability` | name, description, businessTerms[] | chức năng nghiệp vụ; gom từ Endpoint/Channel/Job |
 | `DataStore` | tech, location, kind | collection, bảng, T24 APPLICATION, thư mục file, vector collection |
 | `Channel` | tech, name | topic, queue, IF event, DE message |

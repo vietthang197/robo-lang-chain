@@ -45,7 +45,9 @@ export function linkQueries(env) {
       name: 'deployments',
       cypher: q([
         `MATCH (d:Deployment) WHERE d.env = ${e}`,
-        'RETURN d.uid AS uid, d.projectKey AS projectKey, d.port AS port, d.contextPath AS contextPath, d.hosts AS hosts',
+        'RETURN d.uid AS uid, d.projectKey AS projectKey, d.port AS port, d.contextPath AS contextPath, d.hosts AS hosts,',
+        // linkedHosts: hosts learned by earlier link runs (link.mjs); ingest never writes it.
+        'd.linkedHosts AS linkedHosts',
         'ORDER BY projectKey',
       ]),
     },

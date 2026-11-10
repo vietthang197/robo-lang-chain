@@ -10,6 +10,8 @@ const SYSTEM = '__system__';
 const RANK = { high: 3, medium: 2, low: 1 };
 const VAR = /\{[^}]*\}/g;
 const DUMMY = '__var__';
+const LOOPBACK = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+const MAX_PASSES = 5;
 
 const lower = (s) => (typeof s === 'string' && s.trim() !== '' ? s.trim().toLowerCase() : null);
 const byStr = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
@@ -64,7 +66,15 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
 
   const httpEndpoints = endpoints.filter((e) => pathProtocol(e.protocol))
     .map((e) => ({ ...e, re: endpointRegex(e) })).filter((e) => e.re);
-  const hostsOf = (pk) => uniqSorted((deployments.get(pk)?.hosts ?? []).map(lower));
+  // Known hosts of a deployment: hosts (written by ingest, usually []), linkedHosts (written by
+  // earlier link runs; ingest never touches it) and hosts learned earlier in this run (fixpoint).
+  const learned = new Map(); // projectKey -> Set(host)
+  const hostsOf = (pk) => {
+    const d = deployments.get(pk);
+    return uniqSorted([...(d?.hosts ?? []), ...(d?.linkedHosts ?? []), ...(learned.get(pk) ?? [])].map(lower));
+  };
+  const knownHost = (h) => [...deployments.keys()].some((pk) => hostsOf(pk).includes(h));
+  const serviceName = (h) => services.some((s) => lower(s.name) === h || lower(s.projectKey) === h);
 
   // Endpoints of project pk whose path matches the call path after pk's contextPath strip (R16).
   // {x} segments in the call path match any single segment. Best match first.
@@ -166,8 +176,11 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
     }
     if (portOnly) return portOnly;
 
-    // Rule 3: path only.
-    const hits = matchAll(call, projectsWithHttp);
+    // Rule 3: path only, unless the call names a host that is no deployment's host, no service
+    // name and not loopback: api.partner.com/v1/payments is the partner, not an internal endpoint
+    // that happens to share the path (finding 10).
+    const foreignHost = host !== null && !LOOPBACK.has(host) && !knownHost(host) && !serviceName(host);
+    const hits = foreignHost ? [] : matchAll(call, projectsWithHttp);
     if (hits.length === 1) return http(hits[0].pk, hits[0].ep, 'path', 'medium');
     if (hits.length > 1) return { gap: { kind: 'ambiguous-target', candidates: hits.map((x) => candidate(x.pk)) } };
 
@@ -200,13 +213,14 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
     return ep ? { uid: ep.uid, pk, matchedBy: 'manual', confidence: 'high', protocol: ep.protocol ?? 'http' } : null;
   }
 
-  const nodes = new Map();
-  const edges = [];
-  const gaps = [];
+  // Per-pass state (reset by runPass).
+  let nodes;
+  let edges;
+  let gaps;
+  let newHosts; // projectKey -> Set(host)
+  let externals; // host -> Set(port)
+  let contributions; // {call, to, confidence, protocol}
   const diagnostics = [];
-  const newHosts = new Map(); // projectKey -> Set(host)
-  const externals = new Map(); // host -> Set(port)
-  const contributions = []; // {call, to, confidence, protocol}
   const derived = { derived: true, env };
 
   const describe = (call) => [call.httpMethod, call.urlTemplate ?? call.signature ?? call.topic ?? call.uid].filter(Boolean).join(' ');
@@ -232,6 +246,13 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
     newHosts.get(pk).add(v);
   };
 
+  function runPass() {
+  nodes = new Map();
+  edges = [];
+  gaps = [];
+  newHosts = new Map();
+  externals = new Map();
+  contributions = [];
   for (const call of [...calls].filter((c) => c?.uid).sort((a, b) => byStr(a.uid, b.uid))) {
     const a = answers.get(call.uid);
     if (a) {
@@ -270,6 +291,26 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
       addGap(call, r.gap.kind, r.gap.candidates, r.gap.question ?? questionFor(call, r.gap.kind));
     }
   }
+  }
+
+  // Fixpoint (finding 5): a host learned from one call may turn another call of the same run into a
+  // host match, whatever the call order. Re-run with the learned hosts until nothing new is learned.
+  for (let pass = 0; pass < MAX_PASSES; pass++) {
+    runPass();
+    let grew = false;
+    for (const [pk, add] of newHosts) {
+      const known = hostsOf(pk);
+      for (const h of add) {
+        if (known.includes(h)) continue;
+        if (!learned.has(pk)) learned.set(pk, new Set());
+        learned.get(pk).add(h);
+        grew = true;
+      }
+    }
+    if (!grew) break;
+    if (pass === MAX_PASSES - 1)
+      diagnostics.push({ level: 'warn', message: `learned hosts still changing after ${MAX_PASSES} passes; result may differ on the next run` });
+  }
 
   for (const [host, ports] of externals) {
     const uid = `sys:${env}:${host}`;
@@ -277,16 +318,18 @@ export function planLinks(input, { env, scanId, gapAnswers = [] } = {}) {
     nodes.set(uid, { type: 'ExternalSystem', uid, props: { name: host, host, port: p.length === 1 ? p[0] : null } });
   }
 
-  // Deployment hosts patches, only when the set changes.
+  // Deployment.linkedHosts patches, only when the set changes. Learned hosts never go to
+  // Deployment.hosts: the next ingest resets hosts to [], linkedHosts is written by link only.
   for (const [pk, add] of newHosts) {
     const d = deployments.get(pk);
     if (!d?.uid) {
       diagnostics.push({ level: 'warn', message: `no Deployment for ${pk}; hosts ${[...add].sort().join(',')} not recorded` });
       continue;
     }
-    const before = hostsOf(pk);
-    const after = uniqSorted([...before, ...add]);
-    if (after.length !== before.length) nodes.set(d.uid, { type: 'Deployment', uid: d.uid, props: { hosts: after } });
+    const base = uniqSorted((d.hosts ?? []).map(lower));
+    const before = uniqSorted((d.linkedHosts ?? []).map(lower));
+    const after = uniqSorted([...before, ...[...add].filter((h) => !base.includes(h))]);
+    if (after.length !== before.length) nodes.set(d.uid, { type: 'Deployment', uid: d.uid, props: { linkedHosts: after } });
   }
 
   // SERVICE_DEPENDS_ON rollup per (caller service, target service or external system).
