@@ -167,6 +167,12 @@ export function validateBundle(bundle, options = {}) {
       if (problem) err('R2-uid', problem, n.uid);
     }
   }
+  // gaps[] mirrors Gap nodes; its uids follow the same R12 ownership rule.
+  for (const g of bundle.gaps ?? []) {
+    if (!isObj(g) || !nonEmpty(g.uid) || byUid.has(g.uid)) continue;
+    const problem = checkUid({ type: 'Gap', uid: g.uid }, scan);
+    if (problem) err('R2-uid', problem, g.uid);
+  }
 
   // R3: no dangling edges (link bundles patch the DB, so their endpoints may live there).
   if (!link) {

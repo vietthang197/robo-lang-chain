@@ -181,3 +181,14 @@ test('__system__ is rejected unless it is a link bundle', () => {
   assert.deepEqual(rules(validateBundle(load(), { mode: 'link' }).errors), ['R1-projectKey']);
   assert.deepEqual(validateBundle(load(), { mode: 'ingest' }).errors, []);
 });
+
+test('R2-uid: ingest bundle gaps (nodes and gaps[]) carry the scan projectKey', () => {
+  const b = load();
+  b.nodes.push({ type: 'Gap', uid: 'gap:uat:system:unknown-external:ab12', props: { kind: 'unknown-external', question: 'Gọi tới đâu?', askWho: 'DevOps' } });
+  assert.ok(validateBundle(b).errors.some((e) => e.rule === 'R2-uid' && e.uid === 'gap:uat:system:unknown-external:ab12'));
+  const g = load();
+  g.gaps = [{ uid: 'gap:uat:other:unresolved-call:ab12', kind: 'unresolved-call', question: 'URL gọi tới đâu?', askWho: 'Dev' }];
+  assert.ok(validateBundle(g).errors.some((e) => e.rule === 'R2-uid' && e.uid === 'gap:uat:other:unresolved-call:ab12'));
+  g.gaps[0].uid = 'gap:uat:robo-lang-chain:unresolved-call:ab12';
+  assert.ok(!validateBundle(g).errors.some((e) => e.rule === 'R2-uid'));
+});

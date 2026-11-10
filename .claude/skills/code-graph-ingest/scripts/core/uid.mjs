@@ -64,6 +64,12 @@ export function checkUid(node, scan) {
     if (p.group !== want) return `${type} ${uid}: expected prefix ${want}:, got ${p.group}:`;
     if (p.env !== undefined && p.env !== scan.env) return `${type} ${uid}: env ${p.env} != scan env ${scan.env}`;
     if (p.rest === '') return `${type} ${uid}: empty name after prefix`;
+    // Ruling R12: an ingest writes only its own gaps, a link bundle only system gaps.
+    if (p.group === 'gap') {
+      const owner = linkBundle ? 'system' : scan.projectKey;
+      if (!uid.startsWith(`gap:${scan.env}:${owner}:`))
+        return `${type} ${uid}: ${linkBundle ? 'link' : 'ingest'} bundle gaps must start with gap:${scan.env}:${owner}: (ruling R12)`;
+    }
     return null;
   }
 

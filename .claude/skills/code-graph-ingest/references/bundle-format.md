@@ -131,7 +131,7 @@ Gap trong bundle ingest luôn dùng `gap:<env>:<projectKey>:…` (**ruling R12**
 |---|---|
 | `R1-shape` | đúng cấu trúc; `schemaVersion` hỗ trợ; enum `confidence`/`descriptionSource`/`askWho`/gap kind hợp lệ |
 | `R1-projectKey` | projectKey không là `system`/`__system__`, không chứa `:` |
-| `R2-uid` | uid duy nhất, đúng công thức theo type, `env`/`projectKey` khớp `scan`; `ext:` cần `props.external=true` |
+| `R2-uid` | uid duy nhất, đúng công thức theo type, `env`/`projectKey` khớp `scan`; `ext:` cần `props.external=true`; Gap (node và `gaps[]`) của bundle ingest phải là `gap:<scan.env>:<scan.projectKey>:…`, của link bundle là `gap:<scan.env>:system:…` (ruling R12) |
 | `R3-dangling` | `from`/`to` có trong bundle, hoặc là uid dùng chung (trừ `gap:`), hoặc Endpoint của project khác (chỉ trong `TARGETS`) |
 | `R4-service-deployment` | đúng 1 `Service` và 1 `Deployment` |
 | `R5-service-surface` / `R5-clientcall-url` | Service có ≥1 Endpoint/Channel/Gap; ClientCall có `urlTemplate` hoặc `HAS_GAP` |

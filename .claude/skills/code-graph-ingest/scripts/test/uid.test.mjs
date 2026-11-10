@@ -63,3 +63,14 @@ test('checkUid skips projectKey comparison for __system__ link bundles', () => {
   assert.match(checkUid({ type:'Component', uid:'dev:svc:component:a.B' }, scan), /env/);
   assert.match(checkUid({ type:'Component', uid:'uat:svc:operation:a.B#x' }, scan), /group/);
 });
+
+test('checkUid: ingest gaps are gap:<env>:<projectKey>:, link gaps gap:<env>:system: (R12)', () => {
+  const ingest = { env: 'uat', projectKey: 'svc' };
+  const gap = (uid) => ({ type: 'Gap', uid });
+  assert.equal(checkUid(gap('gap:uat:svc:unresolved-call:ab12'), ingest), null);
+  assert.match(checkUid(gap('gap:uat:system:ambiguous-target:ab12'), ingest), /gap:uat:svc:/);
+  assert.match(checkUid(gap('gap:uat:other:unresolved-call:ab12'), ingest), /gap:uat:svc:/);
+  const link = { env: 'uat', projectKey: '__system__' };
+  assert.equal(checkUid(gap('gap:uat:system:ambiguous-target:ab12'), link), null);
+  assert.match(checkUid(gap('gap:uat:svc:unresolved-call:ab12'), link), /gap:uat:system:/);
+});
