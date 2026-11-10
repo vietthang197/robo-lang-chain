@@ -51,7 +51,9 @@ test('edge to unknown project uid', () => {
 
   const t = load();
   t.edges.push({ type: 'TARGETS', from: OP, to: 'uat:other:endpoint:http:GET /x' });
+  // TARGETS is link-only: reported as R3-derived-in-ingest, not as a dangling edge.
   assert.ok(!rules(validateBundle(t).errors).includes('R3-dangling'));
+  assert.ok(rules(validateBundle(t).errors).includes('R3-derived-in-ingest'));
 
   const c = load();
   c.edges.push({ type: 'CALLS', from: OP, to: 'uat:other:operation:a#b' });
@@ -191,4 +193,38 @@ test('R2-uid: ingest bundle gaps (nodes and gaps[]) carry the scan projectKey', 
   assert.ok(validateBundle(g).errors.some((e) => e.rule === 'R2-uid' && e.uid === 'gap:uat:other:unresolved-call:ab12'));
   g.gaps[0].uid = 'gap:uat:robo-lang-chain:unresolved-call:ab12';
   assert.ok(!validateBundle(g).errors.some((e) => e.rule === 'R2-uid'));
+});
+
+test('R1-profile-unknown: an explicit unknown profile is an error, an unknown scan profile a warning', () => {
+  assert.deepEqual(rules(validateBundle(load(), { profiles: ['spring-bot'] }).errors), ['R1-profile-unknown']);
+  const b = load();
+  b.scan.readerProfiles = ['spring-bot'];
+  const r = validateBundle(b);
+  assert.deepEqual(r.errors, []);
+  assert.ok(rules(r.warnings).includes('W-profile-unknown'));
+});
+
+test('R3-derived-in-ingest: derived edges belong to link bundles only', () => {
+  const OTHER_EP = 'uat:other:endpoint:http:GET /x';
+  for (const [type, to, props] of [
+    ['TARGETS', OTHER_EP, {}],
+    ['SERVICE_DEPENDS_ON', 'uat:other:service:other', {}],
+    ['OWNS_DATA', 'ds:uat:mongodb:db.c', {}],
+    ['READS_DATA', 'ds:uat:mongodb:db.c', {}],
+    ['CALLS', OP, { derived: true }],
+  ]) {
+    const b = load();
+    b.edges.push({ type, from: type === 'TARGETS' || type === 'CALLS' ? OP : SVC, to, props });
+    const r = rules(validateBundle(b).errors);
+    assert.ok(r.includes('R3-derived-in-ingest'), `${type} ${JSON.stringify(r)}`);
+  }
+  // the link bundle may carry them, TARGETS to another project's endpoint included
+  const link = {
+    schemaVersion: '1.0',
+    scan: { scanId: 'uat-system-link-1', env: 'uat', projectKey: '__system__' },
+    nodes: [],
+    edges: [{ type: 'TARGETS', from: 'uat:a:clientcall:x', to: OTHER_EP, props: { derived: true, matchedBy: 'path', confidence: 'medium' } }],
+    gaps: [], diagnostics: [],
+  };
+  assert.deepEqual(validateBundle(link).errors, []);
 });

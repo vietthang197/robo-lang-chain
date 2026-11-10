@@ -16,6 +16,7 @@ const EDGE_KEYS = new Set(['type', 'from', 'to', 'props']);
 const BUNDLE_KEYS = new Set(['schemaVersion', 'scan', 'nodes', 'edges', 'gaps', 'diagnostics']);
 const DESCRIBED_STEREOTYPES = new Set(['controller', 'service']);
 const COVERAGE_THRESHOLD = 0.95;
+const DERIVED_EDGE_TYPES = new Set(['TARGETS', 'SERVICE_DEPENDS_ON', 'OWNS_DATA', 'READS_DATA']);
 
 const isObj = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 const nonEmpty = (v) => typeof v === 'string' && v.trim() !== '';
@@ -174,20 +175,17 @@ export function validateBundle(bundle, options = {}) {
     if (problem) err('R2-uid', problem, g.uid);
   }
 
+  // R3-derived-in-ingest: TARGETS, rollups and any derived:true edge are written by link only
+  // (900-cleanup-derived owns them); an ingest bundle carrying them would be wiped or duplicated.
   // R3: no dangling edges (link bundles patch the DB, so their endpoints may live there).
   if (!link) {
-    const resolvable = (uid, edge, end) => {
-      if (byUid.has(uid)) return true;
-      if (isShared(uid) && !uid.startsWith('gap:')) return true;
-      if (end === 'to' && edge.type === 'TARGETS') {
-        const p = parseUid(uid);
-        return p.scope === 'project' && p.group === 'endpoint' && p.env === scan.env && p.projectKey !== scan.projectKey;
-      }
-      return false;
-    };
+    const isDerived = (e) => DERIVED_EDGE_TYPES.has(e.type) || e.props?.derived === true;
     for (const e of edges)
+      if (isDerived(e)) err('R3-derived-in-ingest', `${e.type} ${e.from} -> ${e.to} is derived; only link bundles carry it`, e.from);
+    const resolvable = (uid) => byUid.has(uid) || (isShared(uid) && !uid.startsWith('gap:'));
+    for (const e of edges.filter((x) => !isDerived(x)))
       for (const end of ['from', 'to'])
-        if (!resolvable(e[end], e, end)) err('R3-dangling', `${e.type} ${end} ${e[end]} is not in the bundle`, e[end]);
+        if (!resolvable(e[end])) err('R3-dangling', `${e.type} ${end} ${e[end]} is not in the bundle`, e[end]);
   }
 
   if (!link) {
@@ -287,7 +285,12 @@ export function validateBundle(bundle, options = {}) {
   const profiles = options.profiles ?? scan.readerProfiles ?? [];
   for (const name of profiles) {
     const rule = profileRules[name];
-    if (typeof rule !== 'function') { warn('W-profile-unknown', `no validation rules for profile ${name}`); continue; }
+    if (typeof rule !== 'function') {
+      // A profile named explicitly (--profile) must exist; one recorded by the scan only warns.
+      if (options.profiles) err('R1-profile-unknown', `unknown profile ${name} (known: ${Object.keys(profileRules).join(',')})`);
+      else warn('W-profile-unknown', `no validation rules for profile ${name}`);
+      continue;
+    }
     for (const i of rule(bundle) ?? []) errors.push(i);
   }
 
