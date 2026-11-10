@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "code-graph-ingest/bundle.schema.json",
+  "title": "code-graph-ingest bundle",
+  "description": "Graph bundle produced for one scan (spec §5). Documentation for the AI; validate-bundle.mjs checks structure itself. env, projectKey and scanId are filled into every node/edge from the scan block by the writer, so they need not be repeated per element.",
+  "type": "object",
+  "required": ["schemaVersion", "scan", "nodes", "edges"],
+  "additionalProperties": false,
+  "properties": {
+    "schemaVersion": { "const": "1.0" },
+    "scan": { "$ref": "#/$defs/scan" },
+    "nodes": { "type": "array", "items": { "$ref": "#/$defs/node" } },
+    "edges": { "type": "array", "items": { "$ref": "#/$defs/edge" } },
+    "gaps": {
+      "description": "Quick-read list of gaps; each gap is also written as a Gap node plus a HAS_GAP edge.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/gap" }
+    },
+    "diagnostics": { "type": "array", "items": { "$ref": "#/$defs/diagnostic" } }
+  },
+  "$defs": {
+    "env": { "enum": ["dev", "uat"] },
+    "confidence": { "enum": ["high", "medium", "low"] },
+    "scan": {
+      "type": "object",
+      "required": ["scanId", "env", "projectKey"],
+      "properties": {
+        "scanId": { "type": "string", "examples": ["uat-robo-lang-chain-20261109T101500Z"] },
+        "env": { "$ref": "#/$defs/env" },
+        "projectKey": { "type": "string", "description": "Project key, or '__system__' for a link bundle." },
+        "repoPath": { "type": "string" },
+        "branch": { "type": "string" },
+        "commitSha": { "type": "string" },
+        "readerProfiles": { "type": "array", "items": { "type": "string" } },
+        "scannedAt": { "type": "string", "format": "date-time" },
+        "coverage": {
+          "type": "object",
+          "properties": {
+            "filesTotal": { "type": "integer", "minimum": 0 },
+            "filesRead": { "type": "integer", "minimum": 0 },
+            "skipped": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["path", "reason"],
+                "properties": { "path": { "type": "string" }, "reason": { "type": "string" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": ["type", "uid"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": ["System", "Environment", "Domain", "Layer", "Service", "Deployment", "Capability", "DataStore", "Channel", "ExternalSystem", "Endpoint", "ClientCall", "ConfigKey", "Bean", "Component", "Module", "Operation", "Member", "Library", "Tag", "Gap"]
+        },
+        "uid": {
+          "type": "string",
+          "description": "Spec §4.2. Project nodes: <env>:<projectKey>:<kind-group>:<qualifiedName>; Endpoint: <env>:<projectKey>:endpoint:<protocol>:<signature>; ConfigKey: <env>:<projectKey>:config:<key>; Deployment: <env>:<projectKey>:deployment; Capability: <env>:<projectKey>:capability:<slug>; Service: <env>:<projectKey>:service:<projectKey>. Shared: ext:<fqn>[#op], lib:<ecosystem>:<coordinate>, tag:<language>:<fqn>, ds:<env>:<tech>:<location>, ch:<env>:<tech>:<name>, sys:<env>:<name>, gap:<env>:<projectKey|system>:<kind>:<hash>, env:<name>, domain:<slug>, layer:<slug>, system:<slug>."
+        },
+        "props": { "$ref": "#/$defs/nodeProps" }
+      }
+    },
+    "nodeProps": {
+      "type": "object",
+      "description": "Common CodeNode properties (spec §4.3) plus type-specific ones (spec §4.4).",
+      "properties": {
+        "kind": { "type": "string" },
+        "nativeType": { "type": "string" },
+        "name": { "type": "string" },
+        "qualifiedName": { "type": "string" },
+        "language": { "type": "string" },
+        "filePath": { "type": "string" },
+        "lineStart": { "type": "integer" },
+        "lineEnd": { "type": "integer" },
+        "contentHash": { "type": "string" },
+        "external": { "type": "boolean" },
+        "description": { "type": "string", "description": "Vietnamese; technical terms stay English." },
+        "descriptionSource": { "enum": ["ai", "human", "doc"] },
+        "evidence": { "type": "array", "items": { "type": "string" }, "description": "uids or file:line" },
+        "confidence": { "$ref": "#/$defs/confidence" }
+      },
+      "additionalProperties": true
+    },
+    "edge": {
+      "type": "object",
+      "required": ["type", "from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": ["IN_ENV", "IN_DOMAIN", "IN_LAYER", "PART_OF", "DEPLOYED_AS", "PROVIDES_CAPABILITY", "REALIZED_BY", "SERVICE_DEPENDS_ON", "OWNS_DATA", "READS_DATA", "SERVES", "CONTAINS", "EXPOSES", "MAKES_CALL", "USES_CONFIG", "TARGETS", "PUBLISHES", "SUBSCRIBES", "ACCESSES", "READS_CONFIG", "PROVIDES", "INJECTS", "BEAN_TYPE", "TRIGGERS", "CALLS", "OVERRIDES", "EXTENDS", "IMPLEMENTS", "USES_TYPE", "TAGGED", "DEPENDS_ON", "FROM_LIBRARY", "HAS_GAP"]
+        },
+        "from": { "type": "string", "description": "uid of the source node" },
+        "to": { "type": "string", "description": "uid of the target node" },
+        "props": { "type": "object", "additionalProperties": true }
+      }
+    },
+    "gap": {
+      "type": "object",
+      "required": ["uid", "kind", "question", "askWho"],
+      "properties": {
+        "uid": { "type": "string" },
+        "kind": {
+          "enum": ["unresolved-call", "missing-config-value", "ambiguous-target", "unknown-external", "low-confidence-description", "unread-files", "unknown-datastore"]
+        },
+        "question": { "type": "string" },
+        "askWho": { "enum": ["BA", "DevOps", "Dev"] },
+        "candidates": { "type": "array", "items": { "type": "string" } },
+        "status": { "enum": ["open", "answered"] },
+        "answer": { "type": "string" }
+      }
+    },
+    "diagnostic": {
+      "type": "object",
+      "required": ["level", "message"],
+      "properties": {
+        "level": { "enum": ["info", "warn", "error"] },
+        "file": { "type": "string" },
+        "message": { "type": "string" }
+      }
+    }
+  }
+}

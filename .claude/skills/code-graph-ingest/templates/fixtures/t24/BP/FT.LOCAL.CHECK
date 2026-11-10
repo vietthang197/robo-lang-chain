@@ -1,0 +1,15 @@
+    SUBROUTINE FT.LOCAL.CHECK(CUS.ID, R.CUSTOMER, CHECK.RESULT)
+*-----------------------------------------------------------------------------
+* Checks that the debit customer may make a transfer: no posting restriction.
+* Returns 'OK' or the error code in CHECK.RESULT.
+*-----------------------------------------------------------------------------
+    $INSERT I_COMMON
+    $INSERT I_EQUATE
+    $INSERT I_F.CUSTOMER
+
+    CHECK.RESULT = 'OK'
+    IF R.CUSTOMER<EB.CUS.POSTING.RESTRICT> NE '' THEN
+        CHECK.RESULT = 'EB-CUSTOMER.POSTING.RESTRICTED'
+    END
+    RETURN
+END

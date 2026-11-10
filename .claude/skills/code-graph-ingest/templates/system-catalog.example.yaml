@@ -1,0 +1,50 @@
+# system-catalog.yaml: catalog dùng chung cho mọi project (đặt tại code-graph-workspace/system-catalog.yaml).
+# Người duyệt sửa file này; AI chỉ đề xuất vào catalog-proposal.yaml của từng project.
+# Xem references/config-and-env.md.
+
+system: { name: core-ecosystem }
+
+environments:
+  dev: { database: CodeGraph }
+  uat: { database: CodeGraph }
+
+domains:
+  document-ai: { name: Document AI, description: Xử lý tài liệu và RAG }
+  catalog: { name: Catalog, description: Quản lý thông tin item }
+
+services:
+  robo-lang-chain:
+    repo: D:/IdeaProjects/robo-lang-chain
+    readerProfiles: [spring-boot]
+    branches: { dev: master, uat: uat }          # env -> branch; ingest đọc code từ git worktree của branch này
+    profiles: { dev: [dev], uat: [uat] }         # env -> Spring profile (application-<profile>.yml); mặc định = tên env
+    domain: document-ai
+    layer: core-service
+    ownerTeam: ai-platform
+  a-service:
+    repo: D:/repos/a-service
+    readerProfiles: [spring-boot]
+    branches: { dev: develop, uat: uat }
+    domain: catalog
+    layer: bff-gateway
+    ownerTeam: catalog-team
+  b-service:
+    repo: D:/repos/b-service
+    readerProfiles: [spring-boot]
+    branches: { dev: develop, uat: uat }
+    domain: catalog
+    layer: core-service
+    ownerTeam: catalog-team
+
+# gapAnswers: nguồn bền vững DUY NHẤT cho TARGETS thủ công (ruling R17).
+# Người trả lời Gap ghi vào đây, KHÔNG sửa TARGETS trong DB. `link` đọc mục này và dựng
+# TARGETS {matchedBy: manual}, đánh dấu Gap tương ứng status=answered; ingest lại cũng không mất.
+#   env:        dev | uat
+#   clientCall: uid đầy đủ của ClientCall (copy từ Gap hoặc topology-report)
+#   answer:     targetService = projectKey của service đích; host = host/IP (tuỳ chọn, được ghi vào Deployment.hosts)
+#   answeredBy: BA | DevOps | Dev (hoặc tên người)
+gapAnswers:
+  - env: uat
+    clientCall: "uat:a-service:clientcall:com.example.a.client.BClient#getItem->feign:GET /items/{id}"
+    answer: { targetService: b-service, host: 10.1.2.3 }
+    answeredBy: BA

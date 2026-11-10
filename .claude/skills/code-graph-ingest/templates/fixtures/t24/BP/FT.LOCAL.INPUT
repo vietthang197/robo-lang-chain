@@ -1,0 +1,43 @@
+    SUBROUTINE FT.LOCAL.INPUT
+*-----------------------------------------------------------------------------
+* INPUT.ROUTINE of VERSION FUNDS.TRANSFER,ACTR.
+* Checks the debit customer, then stamps the ordering customer on the transfer.
+*-----------------------------------------------------------------------------
+    $INSERT I_COMMON
+    $INSERT I_EQUATE
+    $INSERT I_F.FUNDS.TRANSFER
+    $INSERT I_F.CUSTOMER
+
+    GOSUB INITIALISE
+    GOSUB PROCESS
+    RETURN
+
+*-----------------------------------------------------------------------------
+INITIALISE:
+    FN.CUSTOMER = 'F.CUSTOMER'
+    F.CUSTOMER = ''
+    CALL OPF(FN.CUSTOMER, F.CUSTOMER)
+    FN.FUNDS.TRANSFER = 'F.FUNDS.TRANSFER'
+    F.FUNDS.TRANSFER = ''
+    CALL OPF(FN.FUNDS.TRANSFER, F.FUNDS.TRANSFER)
+    RETURN
+
+*-----------------------------------------------------------------------------
+PROCESS:
+    CUS.ID = R.NEW(FT.DEBIT.CUSTOMER)
+    CALL F.READ(FN.CUSTOMER, CUS.ID, R.CUSTOMER, F.CUSTOMER, CUS.ERR)
+    IF CUS.ERR THEN
+        ETEXT = 'EB-CUSTOMER.NOT.FOUND'
+        CALL STORE.END.ERROR
+        RETURN
+    END
+    CALL FT.LOCAL.CHECK(CUS.ID, R.CUSTOMER, CHECK.RESULT)
+    IF CHECK.RESULT NE 'OK' THEN
+        ETEXT = CHECK.RESULT
+        CALL STORE.END.ERROR
+        RETURN
+    END
+    R.NEW(FT.ORDERING.CUST) = R.CUSTOMER<EB.CUS.SHORT.NAME>
+    CALL F.WRITE(FN.FUNDS.TRANSFER, ID.NEW, R.NEW)
+    RETURN
+END

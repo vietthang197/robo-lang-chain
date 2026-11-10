@@ -1,0 +1,923 @@
+{
+  "schemaVersion": "1.0",
+  "scan": {
+    "scanId": "uat-b-service-20261110T090000Z",
+    "env": "uat",
+    "projectKey": "b-service",
+    "repoPath": "templates/fixtures/spring-boot/b-service",
+    "branch": "uat",
+    "commitSha": "fixture",
+    "readerProfiles": [
+      "spring-boot"
+    ],
+    "scannedAt": "2026-11-10T09:00:00Z",
+    "coverage": {
+      "filesTotal": 7,
+      "filesRead": 7,
+      "skipped": []
+    }
+  },
+  "nodes": [
+    {
+      "type": "Service",
+      "uid": "uat:b-service:service:b-service",
+      "props": {
+        "kind": "service",
+        "name": "b-service",
+        "qualifiedName": "b-service",
+        "language": "java",
+        "summary": "b-service quản lý dữ liệu item và cung cấp API tra cứu item theo id. Dữ liệu item nằm ở MongoDB collection items (database b_db ở uat).",
+        "description": "b-service đọc item từ MongoDB collection items qua Spring Data repository và trả về qua REST GET /items/{id} (context-path /b).",
+        "responsibilities": [
+          "Cung cấp API REST GET /items/{id} (dưới context-path /b) để tra cứu item theo id",
+          "Đọc dữ liệu item từ MongoDB collection items qua ItemRepository",
+          "Trả 404 khi không tìm thấy item"
+        ],
+        "notResponsibleFor": [
+          "Không gọi sang service khác",
+          "Không có API tạo/sửa item trong code hiện tại"
+        ],
+        "businessTerms": [
+          "item",
+          "tra cứu item (item lookup)"
+        ],
+        "techStack": [
+          "java",
+          "spring-boot",
+          "spring-web",
+          "spring-data-mongodb",
+          "mongodb"
+        ],
+        "readerProfiles": [
+          "spring-boot"
+        ],
+        "repoUrl": null,
+        "evidence": [
+          "uat:b-service:operation:com.example.b.controller.ItemController#getItem",
+          "uat:b-service:operation:com.example.b.repository.ItemRepository#findById",
+          "src/main/java/com/example/b/model/Item.java:6"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Deployment",
+      "uid": "uat:b-service:deployment",
+      "props": {
+        "kind": "deployment",
+        "name": "b-service@uat",
+        "port": 8081,
+        "contextPath": "/b",
+        "hosts": [],
+        "branch": "uat",
+        "commitSha": "fixture",
+        "profilesActive": [
+          "uat"
+        ]
+      }
+    },
+    {
+      "type": "Environment",
+      "uid": "env:uat",
+      "props": {
+        "kind": "environment",
+        "name": "uat",
+        "database": "CodeGraph"
+      }
+    },
+    {
+      "type": "Module",
+      "uid": "uat:b-service:module:com.example.b",
+      "props": {
+        "kind": "java-package",
+        "name": "com.example.b",
+        "qualifiedName": "com.example.b",
+        "language": "java"
+      }
+    },
+    {
+      "type": "Module",
+      "uid": "uat:b-service:module:com.example.b.controller",
+      "props": {
+        "kind": "java-package",
+        "name": "com.example.b.controller",
+        "qualifiedName": "com.example.b.controller",
+        "language": "java"
+      }
+    },
+    {
+      "type": "Module",
+      "uid": "uat:b-service:module:com.example.b.repository",
+      "props": {
+        "kind": "java-package",
+        "name": "com.example.b.repository",
+        "qualifiedName": "com.example.b.repository",
+        "language": "java"
+      }
+    },
+    {
+      "type": "Module",
+      "uid": "uat:b-service:module:com.example.b.model",
+      "props": {
+        "kind": "java-package",
+        "name": "com.example.b.model",
+        "qualifiedName": "com.example.b.model",
+        "language": "java"
+      }
+    },
+    {
+      "type": "Component",
+      "uid": "uat:b-service:component:com.example.b.BServiceApplication",
+      "props": {
+        "kind": "java-class",
+        "nativeType": "class",
+        "stereotype": "config",
+        "name": "BServiceApplication",
+        "qualifiedName": "com.example.b.BServiceApplication",
+        "language": "java",
+        "filePath": "src/main/java/com/example/b/BServiceApplication.java",
+        "lineStart": 7,
+        "description": "Lớp khởi động Spring Boot của b-service.",
+        "evidence": [
+          "src/main/java/com/example/b/BServiceApplication.java:6"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Operation",
+      "uid": "uat:b-service:operation:com.example.b.BServiceApplication#main",
+      "props": {
+        "kind": "java-method",
+        "name": "main",
+        "qualifiedName": "com.example.b.BServiceApplication#main",
+        "language": "java",
+        "filePath": "src/main/java/com/example/b/BServiceApplication.java",
+        "lineStart": 8,
+        "signature": "main(String[])",
+        "entry": true
+      }
+    },
+    {
+      "type": "Component",
+      "uid": "uat:b-service:component:com.example.b.controller.ItemController",
+      "props": {
+        "kind": "java-class",
+        "nativeType": "class",
+        "stereotype": "controller",
+        "name": "ItemController",
+        "qualifiedName": "com.example.b.controller.ItemController",
+        "language": "java",
+        "filePath": "src/main/java/com/example/b/controller/ItemController.java",
+        "lineStart": 13,
+        "description": "REST controller của b-service cho tài nguyên /items; đọc item qua ItemRepository và trả 200 hoặc 404.",
+        "evidence": [
+          "src/main/java/com/example/b/controller/ItemController.java:11",
+          "src/main/java/com/example/b/controller/ItemController.java:12",
+          "src/main/java/com/example/b/controller/ItemController.java:22"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Operation",
+      "uid": "uat:b-service:operation:com.example.b.controller.ItemController#getItem",
+      "props": {
+        "kind": "java-method",
+        "name": "getItem",
+        "qualifiedName": "com.example.b.controller.ItemController#getItem",
+        "language": "java",
+        "filePath": "src/main/java/com/example/b/controller/ItemController.java",
+        "lineStart": 21,
+        "signature": "getItem(String)",
+        "description": "Handler GET /items/{id}: tìm item theo id bằng ItemRepository.findById (đọc MongoDB collection items); có thì trả 200 kèm Item, không có thì trả 404.",
+        "evidence": [
+          "src/main/java/com/example/b/controller/ItemController.java:20",
+          "src/main/java/com/example/b/controller/ItemController.java:22",
+          "src/main/java/com/example/b/controller/ItemController.java:24"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Component",
+      "uid": "uat:b-service:component:com.example.b.repository.ItemRepository",
+      "props": {
+        "kind": "java-interface",
+        "nativeType": "interface",
+        "stereotype": "repository",
+        "name": "ItemRepository",
+        "qualifiedName": "com.example.b.repository.ItemRepository",
+        "language": "java",
+        "filePath": "src/main/java/com/example/b/repository/ItemRepository.java",
+        "lineStart": 8,
+        "description": "Spring Data MongoDB repository của entity Item (collection items); chỉ dùng các method kế thừa từ MongoRepository.",
+        "evidence": [
+          "src/main/java/com/example/b/repository/ItemRepository.java:7",
+          "src/main/java/com/example/b/repository/ItemRepository.java:8",
+          "src/main/java/com/example/b/model/Item.java:6"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Operation",
+      "uid": "uat:b-service:operation:com.example.b.repository.ItemRepository#findById",
+      "props": {
+        "kind": "inherited",
+        "name": "findById",
+        "qualifiedName": "com.example.b.repository.ItemRepository#findById",
+        "language": "java",
+        "filePath": "src/main/java/com/example/b/repository/ItemRepository.java",
+        "lineStart": 8,
+        "signature": "findById(String)",
+        "description": "Method findById kế thừa từ MongoRepository: đọc một document Item theo id từ collection items.",
+        "evidence": [
+          "src/main/java/com/example/b/repository/ItemRepository.java:8",
+          "src/main/java/com/example/b/controller/ItemController.java:22"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Component",
+      "uid": "uat:b-service:component:com.example.b.model.Item",
+      "props": {
+        "kind": "java-record",
+        "nativeType": "record",
+        "stereotype": "entity",
+        "name": "Item",
+        "qualifiedName": "com.example.b.model.Item",
+        "language": "java",
+        "filePath": "src/main/java/com/example/b/model/Item.java",
+        "lineStart": 7,
+        "description": "Entity Item ánh xạ MongoDB collection items (id, name).",
+        "evidence": [
+          "src/main/java/com/example/b/model/Item.java:6",
+          "src/main/java/com/example/b/model/Item.java:7"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Member",
+      "uid": "uat:b-service:member:com.example.b.model.Item#id",
+      "props": {
+        "kind": "java-field",
+        "name": "id",
+        "qualifiedName": "com.example.b.model.Item#id",
+        "language": "java",
+        "nativeType": "String",
+        "filePath": "src/main/java/com/example/b/model/Item.java",
+        "lineStart": 7
+      }
+    },
+    {
+      "type": "Member",
+      "uid": "uat:b-service:member:com.example.b.model.Item#name",
+      "props": {
+        "kind": "java-field",
+        "name": "name",
+        "qualifiedName": "com.example.b.model.Item#name",
+        "language": "java",
+        "nativeType": "String",
+        "filePath": "src/main/java/com/example/b/model/Item.java",
+        "lineStart": 7
+      }
+    },
+    {
+      "type": "Tag",
+      "uid": "tag:java:org.springframework.data.annotation.Id",
+      "props": {
+        "kind": "java-annotation",
+        "name": "Id",
+        "qualifiedName": "org.springframework.data.annotation.Id",
+        "language": "java",
+        "external": true
+      }
+    },
+    {
+      "type": "Component",
+      "uid": "ext:org.springframework.data.mongodb.repository.MongoRepository",
+      "props": {
+        "kind": "java-interface",
+        "nativeType": "interface",
+        "name": "MongoRepository",
+        "qualifiedName": "org.springframework.data.mongodb.repository.MongoRepository",
+        "language": "java",
+        "external": true
+      }
+    },
+    {
+      "type": "Operation",
+      "uid": "ext:org.springframework.data.mongodb.repository.MongoRepository#findById",
+      "props": {
+        "kind": "java-method",
+        "name": "findById",
+        "qualifiedName": "org.springframework.data.mongodb.repository.MongoRepository#findById",
+        "language": "java",
+        "external": true
+      }
+    },
+    {
+      "type": "DataStore",
+      "uid": "ds:uat:mongodb:b_db.items",
+      "props": {
+        "kind": "collection",
+        "name": "items",
+        "tech": "mongodb",
+        "location": "b_db.items",
+        "description": "MongoDB collection items (database b_db ở uat) chứa dữ liệu item của b-service.",
+        "evidence": [
+          "src/main/java/com/example/b/model/Item.java:6",
+          "src/main/resources/application-uat.yml:4"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Endpoint",
+      "uid": "uat:b-service:endpoint:http:GET /items/{id}",
+      "props": {
+        "kind": "http",
+        "protocol": "http",
+        "httpMethod": "GET",
+        "path": "/items/{id}",
+        "pathRegex": "^/items/[^/]+$",
+        "signature": "GET /items/{id}",
+        "name": "GET /items/{id}",
+        "filePath": "src/main/java/com/example/b/controller/ItemController.java",
+        "lineStart": 20,
+        "description": "Tra cứu một item theo id (URL đầy đủ có context-path: /b/items/{id}). Input: id trên path. Kết quả: Item (id, name) đọc từ MongoDB collection items; 404 nếu không có.",
+        "evidence": [
+          "src/main/java/com/example/b/controller/ItemController.java:12",
+          "src/main/java/com/example/b/controller/ItemController.java:20",
+          "src/main/java/com/example/b/controller/ItemController.java:24",
+          "src/main/resources/application.yml:7"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Capability",
+      "uid": "uat:b-service:capability:item-lookup",
+      "props": {
+        "kind": "capability",
+        "name": "Tra cứu item",
+        "description": "Cung cấp thông tin item theo id từ kho dữ liệu item (MongoDB collection items) do b-service sở hữu.",
+        "businessTerms": [
+          "item",
+          "tra cứu item (item lookup)"
+        ],
+        "evidence": [
+          "uat:b-service:endpoint:http:GET /items/{id}",
+          "ds:uat:mongodb:b_db.items"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "ConfigKey",
+      "uid": "uat:b-service:config:server.port",
+      "props": {
+        "kind": "config",
+        "name": "server.port",
+        "key": "server.port",
+        "value": "8081",
+        "masked": false,
+        "isPlaceholder": false,
+        "placeholderExpr": null,
+        "defaultValue": null,
+        "sourceFile": "src/main/resources/application.yml",
+        "profile": "default",
+        "filePath": "src/main/resources/application.yml",
+        "lineStart": 5
+      }
+    },
+    {
+      "type": "ConfigKey",
+      "uid": "uat:b-service:config:server.servlet.context-path",
+      "props": {
+        "kind": "config",
+        "name": "server.servlet.context-path",
+        "key": "server.servlet.context-path",
+        "value": "/b",
+        "masked": false,
+        "isPlaceholder": false,
+        "placeholderExpr": null,
+        "defaultValue": null,
+        "sourceFile": "src/main/resources/application.yml",
+        "profile": "default",
+        "filePath": "src/main/resources/application.yml",
+        "lineStart": 7
+      }
+    },
+    {
+      "type": "ConfigKey",
+      "uid": "uat:b-service:config:spring.application.name",
+      "props": {
+        "kind": "config",
+        "name": "spring.application.name",
+        "key": "spring.application.name",
+        "value": "b-service",
+        "masked": false,
+        "isPlaceholder": false,
+        "placeholderExpr": null,
+        "defaultValue": null,
+        "sourceFile": "src/main/resources/application.yml",
+        "profile": "default",
+        "filePath": "src/main/resources/application.yml",
+        "lineStart": 3
+      }
+    },
+    {
+      "type": "ConfigKey",
+      "uid": "uat:b-service:config:spring.data.mongodb.database",
+      "props": {
+        "kind": "config",
+        "name": "spring.data.mongodb.database",
+        "key": "spring.data.mongodb.database",
+        "value": "b_db",
+        "masked": false,
+        "isPlaceholder": false,
+        "placeholderExpr": null,
+        "defaultValue": null,
+        "sourceFile": "src/main/resources/application-uat.yml",
+        "profile": "uat",
+        "filePath": "src/main/resources/application-uat.yml",
+        "lineStart": 4
+      }
+    },
+    {
+      "type": "Bean",
+      "uid": "uat:b-service:bean:itemController",
+      "props": {
+        "kind": "spring-bean",
+        "name": "itemController",
+        "framework": "spring",
+        "scope": "singleton",
+        "source": "stereotype"
+      }
+    },
+    {
+      "type": "Bean",
+      "uid": "uat:b-service:bean:itemRepository",
+      "props": {
+        "kind": "spring-bean",
+        "name": "itemRepository",
+        "framework": "spring",
+        "scope": "singleton",
+        "source": "spring-data-repository"
+      }
+    },
+    {
+      "type": "Tag",
+      "uid": "tag:java:org.springframework.boot.autoconfigure.SpringBootApplication",
+      "props": {
+        "kind": "java-annotation",
+        "name": "SpringBootApplication",
+        "qualifiedName": "org.springframework.boot.autoconfigure.SpringBootApplication",
+        "language": "java",
+        "external": true
+      }
+    },
+    {
+      "type": "Tag",
+      "uid": "tag:java:org.springframework.web.bind.annotation.RestController",
+      "props": {
+        "kind": "java-annotation",
+        "name": "RestController",
+        "qualifiedName": "org.springframework.web.bind.annotation.RestController",
+        "language": "java",
+        "external": true
+      }
+    },
+    {
+      "type": "Tag",
+      "uid": "tag:java:org.springframework.web.bind.annotation.RequestMapping",
+      "props": {
+        "kind": "java-annotation",
+        "name": "RequestMapping",
+        "qualifiedName": "org.springframework.web.bind.annotation.RequestMapping",
+        "language": "java",
+        "external": true
+      }
+    },
+    {
+      "type": "Tag",
+      "uid": "tag:java:org.springframework.web.bind.annotation.GetMapping",
+      "props": {
+        "kind": "java-annotation",
+        "name": "GetMapping",
+        "qualifiedName": "org.springframework.web.bind.annotation.GetMapping",
+        "language": "java",
+        "external": true
+      }
+    },
+    {
+      "type": "Tag",
+      "uid": "tag:java:org.springframework.stereotype.Repository",
+      "props": {
+        "kind": "java-annotation",
+        "name": "Repository",
+        "qualifiedName": "org.springframework.stereotype.Repository",
+        "language": "java",
+        "external": true
+      }
+    },
+    {
+      "type": "Tag",
+      "uid": "tag:java:org.springframework.data.mongodb.core.mapping.Document",
+      "props": {
+        "kind": "java-annotation",
+        "name": "Document",
+        "qualifiedName": "org.springframework.data.mongodb.core.mapping.Document",
+        "language": "java",
+        "external": true
+      }
+    },
+    {
+      "type": "Library",
+      "uid": "lib:maven:org.springframework.boot:spring-boot-starter-web",
+      "props": {
+        "kind": "maven",
+        "name": "spring-boot-starter-web",
+        "qualifiedName": "org.springframework.boot:spring-boot-starter-web",
+        "external": true
+      }
+    },
+    {
+      "type": "Library",
+      "uid": "lib:maven:org.springframework.boot:spring-boot-starter-data-mongodb",
+      "props": {
+        "kind": "maven",
+        "name": "spring-boot-starter-data-mongodb",
+        "qualifiedName": "org.springframework.boot:spring-boot-starter-data-mongodb",
+        "external": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "type": "IN_ENV",
+      "from": "uat:b-service:service:b-service",
+      "to": "env:uat",
+      "props": {}
+    },
+    {
+      "type": "IN_ENV",
+      "from": "uat:b-service:deployment",
+      "to": "env:uat",
+      "props": {}
+    },
+    {
+      "type": "DEPLOYED_AS",
+      "from": "uat:b-service:service:b-service",
+      "to": "uat:b-service:deployment",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:b-service:service:b-service",
+      "to": "uat:b-service:module:com.example.b",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:b-service:service:b-service",
+      "to": "uat:b-service:module:com.example.b.controller",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:b-service:service:b-service",
+      "to": "uat:b-service:module:com.example.b.repository",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:b-service:service:b-service",
+      "to": "uat:b-service:module:com.example.b.model",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:b-service:module:com.example.b",
+      "to": "uat:b-service:component:com.example.b.BServiceApplication",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:b-service:component:com.example.b.BServiceApplication",
+      "to": "uat:b-service:operation:com.example.b.BServiceApplication#main",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:b-service:module:com.example.b.controller",
+      "to": "uat:b-service:component:com.example.b.controller.ItemController",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:b-service:component:com.example.b.controller.ItemController",
+      "to": "uat:b-service:operation:com.example.b.controller.ItemController#getItem",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:b-service:module:com.example.b.repository",
+      "to": "uat:b-service:component:com.example.b.repository.ItemRepository",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:b-service:component:com.example.b.repository.ItemRepository",
+      "to": "uat:b-service:operation:com.example.b.repository.ItemRepository#findById",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:b-service:module:com.example.b.model",
+      "to": "uat:b-service:component:com.example.b.model.Item",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:b-service:component:com.example.b.model.Item",
+      "to": "uat:b-service:member:com.example.b.model.Item#id",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:b-service:component:com.example.b.model.Item",
+      "to": "uat:b-service:member:com.example.b.model.Item#name",
+      "props": {}
+    },
+    {
+      "type": "TAGGED",
+      "from": "uat:b-service:member:com.example.b.model.Item#id",
+      "to": "tag:java:org.springframework.data.annotation.Id",
+      "props": {}
+    },
+    {
+      "type": "EXTENDS",
+      "from": "uat:b-service:component:com.example.b.repository.ItemRepository",
+      "to": "ext:org.springframework.data.mongodb.repository.MongoRepository",
+      "props": {
+        "typeArgs": [
+          "com.example.b.model.Item",
+          "String"
+        ]
+      }
+    },
+    {
+      "type": "OVERRIDES",
+      "from": "uat:b-service:operation:com.example.b.repository.ItemRepository#findById",
+      "to": "ext:org.springframework.data.mongodb.repository.MongoRepository#findById",
+      "props": {}
+    },
+    {
+      "type": "CALLS",
+      "from": "uat:b-service:operation:com.example.b.controller.ItemController#getItem",
+      "to": "uat:b-service:operation:com.example.b.repository.ItemRepository#findById",
+      "props": {
+        "dispatch": "interface",
+        "lines": [
+          22
+        ],
+        "resolved": true
+      }
+    },
+    {
+      "type": "ACCESSES",
+      "from": "uat:b-service:operation:com.example.b.repository.ItemRepository#findById",
+      "to": "ds:uat:mongodb:b_db.items",
+      "props": {
+        "mode": "read"
+      }
+    },
+    {
+      "type": "ACCESSES",
+      "from": "uat:b-service:component:com.example.b.model.Item",
+      "to": "ds:uat:mongodb:b_db.items",
+      "props": {
+        "mode": "maps"
+      }
+    },
+    {
+      "type": "EXPOSES",
+      "from": "uat:b-service:operation:com.example.b.controller.ItemController#getItem",
+      "to": "uat:b-service:endpoint:http:GET /items/{id}",
+      "props": {}
+    },
+    {
+      "type": "SERVES",
+      "from": "uat:b-service:deployment",
+      "to": "uat:b-service:endpoint:http:GET /items/{id}",
+      "props": {}
+    },
+    {
+      "type": "PROVIDES_CAPABILITY",
+      "from": "uat:b-service:service:b-service",
+      "to": "uat:b-service:capability:item-lookup",
+      "props": {}
+    },
+    {
+      "type": "REALIZED_BY",
+      "from": "uat:b-service:capability:item-lookup",
+      "to": "uat:b-service:endpoint:http:GET /items/{id}",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:b-service:service:b-service",
+      "to": "uat:b-service:config:server.port",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:b-service:service:b-service",
+      "to": "uat:b-service:config:server.servlet.context-path",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:b-service:service:b-service",
+      "to": "uat:b-service:config:spring.application.name",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:b-service:service:b-service",
+      "to": "uat:b-service:config:spring.data.mongodb.database",
+      "props": {}
+    },
+    {
+      "type": "USES_CONFIG",
+      "from": "uat:b-service:deployment",
+      "to": "uat:b-service:config:server.port",
+      "props": {
+        "role": "port"
+      }
+    },
+    {
+      "type": "USES_CONFIG",
+      "from": "uat:b-service:deployment",
+      "to": "uat:b-service:config:server.servlet.context-path",
+      "props": {
+        "role": "context-path"
+      }
+    },
+    {
+      "type": "READS_CONFIG",
+      "from": "uat:b-service:component:com.example.b.repository.ItemRepository",
+      "to": "uat:b-service:config:spring.data.mongodb.database",
+      "props": {
+        "via": "spring-data-mongodb auto-configuration"
+      }
+    },
+    {
+      "type": "PROVIDES",
+      "from": "uat:b-service:component:com.example.b.controller.ItemController",
+      "to": "uat:b-service:bean:itemController",
+      "props": {
+        "via": "stereotype"
+      }
+    },
+    {
+      "type": "BEAN_TYPE",
+      "from": "uat:b-service:bean:itemController",
+      "to": "uat:b-service:component:com.example.b.controller.ItemController",
+      "props": {}
+    },
+    {
+      "type": "PROVIDES",
+      "from": "uat:b-service:component:com.example.b.repository.ItemRepository",
+      "to": "uat:b-service:bean:itemRepository",
+      "props": {
+        "via": "spring-data-repository"
+      }
+    },
+    {
+      "type": "BEAN_TYPE",
+      "from": "uat:b-service:bean:itemRepository",
+      "to": "uat:b-service:component:com.example.b.repository.ItemRepository",
+      "props": {}
+    },
+    {
+      "type": "INJECTS",
+      "from": "uat:b-service:component:com.example.b.controller.ItemController",
+      "to": "uat:b-service:bean:itemRepository",
+      "props": {
+        "via": "constructor"
+      }
+    },
+    {
+      "type": "USES_TYPE",
+      "from": "uat:b-service:operation:com.example.b.controller.ItemController#getItem",
+      "to": "uat:b-service:component:com.example.b.model.Item",
+      "props": {
+        "role": "return"
+      }
+    },
+    {
+      "type": "USES_TYPE",
+      "from": "uat:b-service:component:com.example.b.repository.ItemRepository",
+      "to": "uat:b-service:component:com.example.b.model.Item",
+      "props": {
+        "role": "type-arg"
+      }
+    },
+    {
+      "type": "TAGGED",
+      "from": "uat:b-service:component:com.example.b.BServiceApplication",
+      "to": "tag:java:org.springframework.boot.autoconfigure.SpringBootApplication",
+      "props": {}
+    },
+    {
+      "type": "TAGGED",
+      "from": "uat:b-service:component:com.example.b.controller.ItemController",
+      "to": "tag:java:org.springframework.web.bind.annotation.RestController",
+      "props": {}
+    },
+    {
+      "type": "TAGGED",
+      "from": "uat:b-service:component:com.example.b.controller.ItemController",
+      "to": "tag:java:org.springframework.web.bind.annotation.RequestMapping",
+      "props": {
+        "attributes": {
+          "value": "/items"
+        }
+      }
+    },
+    {
+      "type": "TAGGED",
+      "from": "uat:b-service:operation:com.example.b.controller.ItemController#getItem",
+      "to": "tag:java:org.springframework.web.bind.annotation.GetMapping",
+      "props": {
+        "attributes": {
+          "value": "/{id}"
+        }
+      }
+    },
+    {
+      "type": "TAGGED",
+      "from": "uat:b-service:component:com.example.b.repository.ItemRepository",
+      "to": "tag:java:org.springframework.stereotype.Repository",
+      "props": {}
+    },
+    {
+      "type": "TAGGED",
+      "from": "uat:b-service:component:com.example.b.model.Item",
+      "to": "tag:java:org.springframework.data.mongodb.core.mapping.Document",
+      "props": {
+        "attributes": {
+          "collection": "items"
+        }
+      }
+    },
+    {
+      "type": "DEPENDS_ON",
+      "from": "uat:b-service:service:b-service",
+      "to": "lib:maven:org.springframework.boot:spring-boot-starter-web",
+      "props": {
+        "version": "3.3.5",
+        "scope": "compile",
+        "transitive": false,
+        "via": "pom.xml"
+      }
+    },
+    {
+      "type": "DEPENDS_ON",
+      "from": "uat:b-service:service:b-service",
+      "to": "lib:maven:org.springframework.boot:spring-boot-starter-data-mongodb",
+      "props": {
+        "version": "3.3.5",
+        "scope": "compile",
+        "transitive": false,
+        "via": "pom.xml"
+      }
+    },
+    {
+      "type": "FROM_LIBRARY",
+      "from": "ext:org.springframework.data.mongodb.repository.MongoRepository",
+      "to": "lib:maven:org.springframework.boot:spring-boot-starter-data-mongodb",
+      "props": {
+        "inferred": true
+      }
+    }
+  ],
+  "gaps": [],
+  "diagnostics": []
+}

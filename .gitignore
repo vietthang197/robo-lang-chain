@@ -28,3 +28,7 @@ libs/
 .DS_Store
 Thumbs.db
 ```
+
+# code-graph-ingest skill
+code-graph-workspace/
+.claude/skills/code-graph-ingest/node_modules/

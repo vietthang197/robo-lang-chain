@@ -1,0 +1,994 @@
+{
+  "schemaVersion": "1.0",
+  "scan": {
+    "scanId": "uat-a-service-20261110T090000Z",
+    "env": "uat",
+    "projectKey": "a-service",
+    "repoPath": "templates/fixtures/spring-boot/a-service",
+    "branch": "uat",
+    "commitSha": "fixture",
+    "readerProfiles": [
+      "spring-boot"
+    ],
+    "scannedAt": "2026-11-10T09:00:00Z",
+    "coverage": {
+      "filesTotal": 8,
+      "filesRead": 8,
+      "skipped": []
+    }
+  },
+  "nodes": [
+    {
+      "type": "Service",
+      "uid": "uat:a-service:service:a-service",
+      "props": {
+        "kind": "service",
+        "name": "a-service",
+        "qualifiedName": "a-service",
+        "language": "java",
+        "summary": "a-service là lớp proxy tra cứu item: nhận request REST từ client và lấy dữ liệu item từ b-service qua Feign client. Service không lưu dữ liệu item.",
+        "description": "a-service nhận request tra cứu item qua REST, kiểm tra id rồi gọi b-service (GET /items/{id}) qua Feign client BClient để lấy dữ liệu.",
+        "responsibilities": [
+          "Cung cấp API REST GET /api/items/{id} để tra cứu item theo id",
+          "Kiểm tra tham số id trước khi gọi tiếp (id rỗng thì báo lỗi)",
+          "Gọi b-service qua Feign client BClient với base URL cấu hình b-service.url"
+        ],
+        "notResponsibleFor": [
+          "Không lưu trữ hay sở hữu dữ liệu item (dữ liệu nằm ở b-service)",
+          "Không tạo hoặc sửa item"
+        ],
+        "businessTerms": [
+          "item",
+          "tra cứu item (item lookup)"
+        ],
+        "techStack": [
+          "java",
+          "spring-boot",
+          "spring-web",
+          "spring-cloud-openfeign"
+        ],
+        "readerProfiles": [
+          "spring-boot"
+        ],
+        "repoUrl": null,
+        "evidence": [
+          "uat:a-service:operation:com.example.a.controller.ItemProxyController#getItem",
+          "uat:a-service:operation:com.example.a.service.ItemService#getItem",
+          "uat:a-service:clientcall:com.example.a.client.BClient#getItem->feign:GET /items/{id}"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Deployment",
+      "uid": "uat:a-service:deployment",
+      "props": {
+        "kind": "deployment",
+        "name": "a-service@uat",
+        "port": 8080,
+        "contextPath": null,
+        "hosts": [],
+        "branch": "uat",
+        "commitSha": "fixture",
+        "profilesActive": [
+          "uat"
+        ]
+      }
+    },
+    {
+      "type": "Environment",
+      "uid": "env:uat",
+      "props": {
+        "kind": "environment",
+        "name": "uat",
+        "database": "CodeGraph"
+      }
+    },
+    {
+      "type": "Module",
+      "uid": "uat:a-service:module:com.example.a",
+      "props": {
+        "kind": "java-package",
+        "name": "com.example.a",
+        "qualifiedName": "com.example.a",
+        "language": "java"
+      }
+    },
+    {
+      "type": "Module",
+      "uid": "uat:a-service:module:com.example.a.controller",
+      "props": {
+        "kind": "java-package",
+        "name": "com.example.a.controller",
+        "qualifiedName": "com.example.a.controller",
+        "language": "java"
+      }
+    },
+    {
+      "type": "Module",
+      "uid": "uat:a-service:module:com.example.a.service",
+      "props": {
+        "kind": "java-package",
+        "name": "com.example.a.service",
+        "qualifiedName": "com.example.a.service",
+        "language": "java"
+      }
+    },
+    {
+      "type": "Module",
+      "uid": "uat:a-service:module:com.example.a.client",
+      "props": {
+        "kind": "java-package",
+        "name": "com.example.a.client",
+        "qualifiedName": "com.example.a.client",
+        "language": "java"
+      }
+    },
+    {
+      "type": "Module",
+      "uid": "uat:a-service:module:com.example.a.dto",
+      "props": {
+        "kind": "java-package",
+        "name": "com.example.a.dto",
+        "qualifiedName": "com.example.a.dto",
+        "language": "java"
+      }
+    },
+    {
+      "type": "Component",
+      "uid": "uat:a-service:component:com.example.a.AServiceApplication",
+      "props": {
+        "kind": "java-class",
+        "nativeType": "class",
+        "stereotype": "config",
+        "name": "AServiceApplication",
+        "qualifiedName": "com.example.a.AServiceApplication",
+        "language": "java",
+        "filePath": "src/main/java/com/example/a/AServiceApplication.java",
+        "lineStart": 9,
+        "description": "Lớp khởi động Spring Boot của a-service; bật Feign client (@EnableFeignClients) để dùng BClient.",
+        "evidence": [
+          "src/main/java/com/example/a/AServiceApplication.java:7",
+          "src/main/java/com/example/a/AServiceApplication.java:8"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Operation",
+      "uid": "uat:a-service:operation:com.example.a.AServiceApplication#main",
+      "props": {
+        "kind": "java-method",
+        "name": "main",
+        "qualifiedName": "com.example.a.AServiceApplication#main",
+        "language": "java",
+        "filePath": "src/main/java/com/example/a/AServiceApplication.java",
+        "lineStart": 10,
+        "signature": "main(String[])",
+        "entry": true
+      }
+    },
+    {
+      "type": "Component",
+      "uid": "uat:a-service:component:com.example.a.controller.ItemProxyController",
+      "props": {
+        "kind": "java-class",
+        "nativeType": "class",
+        "stereotype": "controller",
+        "name": "ItemProxyController",
+        "qualifiedName": "com.example.a.controller.ItemProxyController",
+        "language": "java",
+        "filePath": "src/main/java/com/example/a/controller/ItemProxyController.java",
+        "lineStart": 12,
+        "description": "REST controller của a-service cho tài nguyên /api/items; nhận id item và giao cho ItemService tra cứu.",
+        "evidence": [
+          "src/main/java/com/example/a/controller/ItemProxyController.java:10",
+          "src/main/java/com/example/a/controller/ItemProxyController.java:11",
+          "src/main/java/com/example/a/controller/ItemProxyController.java:21"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Operation",
+      "uid": "uat:a-service:operation:com.example.a.controller.ItemProxyController#getItem",
+      "props": {
+        "kind": "java-method",
+        "name": "getItem",
+        "qualifiedName": "com.example.a.controller.ItemProxyController#getItem",
+        "language": "java",
+        "filePath": "src/main/java/com/example/a/controller/ItemProxyController.java",
+        "lineStart": 20,
+        "signature": "getItem(String)",
+        "description": "Handler GET /api/items/{id}: nhận id từ path và trả về ItemDto do ItemService.getItem trả về.",
+        "evidence": [
+          "src/main/java/com/example/a/controller/ItemProxyController.java:19",
+          "src/main/java/com/example/a/controller/ItemProxyController.java:21"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Component",
+      "uid": "uat:a-service:component:com.example.a.service.ItemService",
+      "props": {
+        "kind": "java-class",
+        "nativeType": "class",
+        "stereotype": "service",
+        "name": "ItemService",
+        "qualifiedName": "com.example.a.service.ItemService",
+        "language": "java",
+        "filePath": "src/main/java/com/example/a/service/ItemService.java",
+        "lineStart": 8,
+        "description": "Service nghiệp vụ tra cứu item; kiểm tra id rồi lấy item từ b-service qua Feign client BClient.",
+        "evidence": [
+          "src/main/java/com/example/a/service/ItemService.java:7",
+          "src/main/java/com/example/a/service/ItemService.java:19"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Operation",
+      "uid": "uat:a-service:operation:com.example.a.service.ItemService#getItem",
+      "props": {
+        "kind": "java-method",
+        "name": "getItem",
+        "qualifiedName": "com.example.a.service.ItemService#getItem",
+        "language": "java",
+        "filePath": "src/main/java/com/example/a/service/ItemService.java",
+        "lineStart": 15,
+        "signature": "getItem(String)",
+        "description": "Kiểm tra id (rỗng thì ném IllegalArgumentException), sau đó gọi BClient.getItem để lấy item từ b-service.",
+        "evidence": [
+          "src/main/java/com/example/a/service/ItemService.java:16",
+          "src/main/java/com/example/a/service/ItemService.java:17",
+          "src/main/java/com/example/a/service/ItemService.java:19"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Component",
+      "uid": "uat:a-service:component:com.example.a.client.BClient",
+      "props": {
+        "kind": "java-interface",
+        "nativeType": "interface",
+        "stereotype": "feign-client",
+        "name": "BClient",
+        "qualifiedName": "com.example.a.client.BClient",
+        "language": "java",
+        "filePath": "src/main/java/com/example/a/client/BClient.java",
+        "lineStart": 9,
+        "description": "Feign client gọi sang b-service; base URL lấy từ config b-service.url, tên discovery là b-service.",
+        "evidence": [
+          "src/main/java/com/example/a/client/BClient.java:8"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Operation",
+      "uid": "uat:a-service:operation:com.example.a.client.BClient#getItem",
+      "props": {
+        "kind": "java-method",
+        "name": "getItem",
+        "qualifiedName": "com.example.a.client.BClient#getItem",
+        "language": "java",
+        "filePath": "src/main/java/com/example/a/client/BClient.java",
+        "lineStart": 11,
+        "signature": "getItem(String)",
+        "description": "Gọi HTTP GET /items/{id} của b-service qua Feign để lấy item theo id.",
+        "evidence": [
+          "src/main/java/com/example/a/client/BClient.java:10",
+          "src/main/java/com/example/a/client/BClient.java:11"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Component",
+      "uid": "uat:a-service:component:com.example.a.dto.ItemDto",
+      "props": {
+        "kind": "java-record",
+        "nativeType": "record",
+        "stereotype": "dto",
+        "name": "ItemDto",
+        "qualifiedName": "com.example.a.dto.ItemDto",
+        "language": "java",
+        "filePath": "src/main/java/com/example/a/dto/ItemDto.java",
+        "lineStart": 3
+      }
+    },
+    {
+      "type": "Member",
+      "uid": "uat:a-service:member:com.example.a.dto.ItemDto#id",
+      "props": {
+        "kind": "java-field",
+        "name": "id",
+        "qualifiedName": "com.example.a.dto.ItemDto#id",
+        "language": "java",
+        "nativeType": "String",
+        "filePath": "src/main/java/com/example/a/dto/ItemDto.java",
+        "lineStart": 3
+      }
+    },
+    {
+      "type": "Member",
+      "uid": "uat:a-service:member:com.example.a.dto.ItemDto#name",
+      "props": {
+        "kind": "java-field",
+        "name": "name",
+        "qualifiedName": "com.example.a.dto.ItemDto#name",
+        "language": "java",
+        "nativeType": "String",
+        "filePath": "src/main/java/com/example/a/dto/ItemDto.java",
+        "lineStart": 3
+      }
+    },
+    {
+      "type": "Endpoint",
+      "uid": "uat:a-service:endpoint:http:GET /api/items/{id}",
+      "props": {
+        "kind": "http",
+        "protocol": "http",
+        "httpMethod": "GET",
+        "path": "/api/items/{id}",
+        "pathRegex": "^/api/items/[^/]+$",
+        "signature": "GET /api/items/{id}",
+        "name": "GET /api/items/{id}",
+        "filePath": "src/main/java/com/example/a/controller/ItemProxyController.java",
+        "lineStart": 19,
+        "description": "Tra cứu một item theo id. Input: id trên path. Kết quả: ItemDto (id, name) lấy từ b-service qua GET /items/{id}. Lỗi: id rỗng gây IllegalArgumentException; lỗi từ b-service được Feign ném lại.",
+        "evidence": [
+          "src/main/java/com/example/a/controller/ItemProxyController.java:11",
+          "src/main/java/com/example/a/controller/ItemProxyController.java:19",
+          "uat:a-service:clientcall:com.example.a.client.BClient#getItem->feign:GET /items/{id}"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "Capability",
+      "uid": "uat:a-service:capability:item-lookup-proxy",
+      "props": {
+        "kind": "capability",
+        "name": "Tra cứu item qua b-service",
+        "description": "Cho phép client tra cứu thông tin item theo id; a-service chỉ chuyển tiếp sang b-service, không lưu dữ liệu.",
+        "businessTerms": [
+          "item",
+          "tra cứu item (item lookup)"
+        ],
+        "evidence": [
+          "uat:a-service:endpoint:http:GET /api/items/{id}",
+          "uat:a-service:clientcall:com.example.a.client.BClient#getItem->feign:GET /items/{id}"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "ClientCall",
+      "uid": "uat:a-service:clientcall:com.example.a.client.BClient#getItem->feign:GET /items/{id}",
+      "props": {
+        "kind": "feign",
+        "clientKind": "feign",
+        "name": "BClient#getItem -> GET /items/{id}",
+        "httpMethod": "GET",
+        "urlTemplate": "/items/{id}",
+        "baseUrlConfigKey": "b-service.url",
+        "resolvedBaseUrl": "http://10.1.2.3:8081/b",
+        "resolvedHost": "10.1.2.3",
+        "resolvedPort": 8081,
+        "resolvedPath": "/b/items/{id}",
+        "discoveryName": "b-service",
+        "signature": null,
+        "topic": null,
+        "filePath": "src/main/java/com/example/a/client/BClient.java",
+        "lineStart": 10,
+        "description": "Lời gọi Feign GET /items/{id} sang b-service; ở uat base URL là http://10.1.2.3:8081/b (đã gồm context-path /b của b-service).",
+        "evidence": [
+          "src/main/java/com/example/a/client/BClient.java:8",
+          "src/main/java/com/example/a/client/BClient.java:10",
+          "src/main/resources/application-uat.yml:2"
+        ],
+        "confidence": "high",
+        "descriptionSource": "ai"
+      }
+    },
+    {
+      "type": "ConfigKey",
+      "uid": "uat:a-service:config:server.port",
+      "props": {
+        "kind": "config",
+        "name": "server.port",
+        "key": "server.port",
+        "value": "8080",
+        "masked": false,
+        "isPlaceholder": false,
+        "placeholderExpr": null,
+        "defaultValue": null,
+        "sourceFile": "src/main/resources/application.yml",
+        "profile": "default",
+        "filePath": "src/main/resources/application.yml",
+        "lineStart": 5
+      }
+    },
+    {
+      "type": "ConfigKey",
+      "uid": "uat:a-service:config:spring.application.name",
+      "props": {
+        "kind": "config",
+        "name": "spring.application.name",
+        "key": "spring.application.name",
+        "value": "a-service",
+        "masked": false,
+        "isPlaceholder": false,
+        "placeholderExpr": null,
+        "defaultValue": null,
+        "sourceFile": "src/main/resources/application.yml",
+        "profile": "default",
+        "filePath": "src/main/resources/application.yml",
+        "lineStart": 3
+      }
+    },
+    {
+      "type": "ConfigKey",
+      "uid": "uat:a-service:config:b-service.url",
+      "props": {
+        "kind": "config",
+        "name": "b-service.url",
+        "key": "b-service.url",
+        "value": "http://10.1.2.3:8081/b",
+        "masked": false,
+        "isPlaceholder": false,
+        "placeholderExpr": null,
+        "defaultValue": null,
+        "sourceFile": "src/main/resources/application-uat.yml",
+        "profile": "uat",
+        "filePath": "src/main/resources/application-uat.yml",
+        "lineStart": 2
+      }
+    },
+    {
+      "type": "ConfigKey",
+      "uid": "uat:a-service:config:spring.datasource.password",
+      "props": {
+        "kind": "config",
+        "name": "spring.datasource.password",
+        "key": "spring.datasource.password",
+        "value": "***",
+        "masked": true,
+        "isPlaceholder": false,
+        "placeholderExpr": null,
+        "defaultValue": null,
+        "sourceFile": "src/main/resources/application-uat.yml",
+        "profile": "uat",
+        "filePath": "src/main/resources/application-uat.yml",
+        "lineStart": 5
+      }
+    },
+    {
+      "type": "Bean",
+      "uid": "uat:a-service:bean:itemProxyController",
+      "props": {
+        "kind": "spring-bean",
+        "name": "itemProxyController",
+        "framework": "spring",
+        "scope": "singleton",
+        "source": "stereotype"
+      }
+    },
+    {
+      "type": "Bean",
+      "uid": "uat:a-service:bean:itemService",
+      "props": {
+        "kind": "spring-bean",
+        "name": "itemService",
+        "framework": "spring",
+        "scope": "singleton",
+        "source": "stereotype"
+      }
+    },
+    {
+      "type": "Bean",
+      "uid": "uat:a-service:bean:bClient",
+      "props": {
+        "kind": "spring-bean",
+        "name": "bClient",
+        "framework": "spring",
+        "scope": "singleton",
+        "source": "feign-client"
+      }
+    },
+    {
+      "type": "Tag",
+      "uid": "tag:java:org.springframework.boot.autoconfigure.SpringBootApplication",
+      "props": {
+        "kind": "java-annotation",
+        "name": "SpringBootApplication",
+        "qualifiedName": "org.springframework.boot.autoconfigure.SpringBootApplication",
+        "language": "java",
+        "external": true
+      }
+    },
+    {
+      "type": "Tag",
+      "uid": "tag:java:org.springframework.cloud.openfeign.EnableFeignClients",
+      "props": {
+        "kind": "java-annotation",
+        "name": "EnableFeignClients",
+        "qualifiedName": "org.springframework.cloud.openfeign.EnableFeignClients",
+        "language": "java",
+        "external": true
+      }
+    },
+    {
+      "type": "Tag",
+      "uid": "tag:java:org.springframework.web.bind.annotation.RestController",
+      "props": {
+        "kind": "java-annotation",
+        "name": "RestController",
+        "qualifiedName": "org.springframework.web.bind.annotation.RestController",
+        "language": "java",
+        "external": true
+      }
+    },
+    {
+      "type": "Tag",
+      "uid": "tag:java:org.springframework.web.bind.annotation.RequestMapping",
+      "props": {
+        "kind": "java-annotation",
+        "name": "RequestMapping",
+        "qualifiedName": "org.springframework.web.bind.annotation.RequestMapping",
+        "language": "java",
+        "external": true
+      }
+    },
+    {
+      "type": "Tag",
+      "uid": "tag:java:org.springframework.web.bind.annotation.GetMapping",
+      "props": {
+        "kind": "java-annotation",
+        "name": "GetMapping",
+        "qualifiedName": "org.springframework.web.bind.annotation.GetMapping",
+        "language": "java",
+        "external": true
+      }
+    },
+    {
+      "type": "Tag",
+      "uid": "tag:java:org.springframework.stereotype.Service",
+      "props": {
+        "kind": "java-annotation",
+        "name": "Service",
+        "qualifiedName": "org.springframework.stereotype.Service",
+        "language": "java",
+        "external": true
+      }
+    },
+    {
+      "type": "Tag",
+      "uid": "tag:java:org.springframework.cloud.openfeign.FeignClient",
+      "props": {
+        "kind": "java-annotation",
+        "name": "FeignClient",
+        "qualifiedName": "org.springframework.cloud.openfeign.FeignClient",
+        "language": "java",
+        "external": true
+      }
+    },
+    {
+      "type": "Library",
+      "uid": "lib:maven:org.springframework.boot:spring-boot-starter-web",
+      "props": {
+        "kind": "maven",
+        "name": "spring-boot-starter-web",
+        "qualifiedName": "org.springframework.boot:spring-boot-starter-web",
+        "external": true
+      }
+    },
+    {
+      "type": "Library",
+      "uid": "lib:maven:org.springframework.cloud:spring-cloud-starter-openfeign",
+      "props": {
+        "kind": "maven",
+        "name": "spring-cloud-starter-openfeign",
+        "qualifiedName": "org.springframework.cloud:spring-cloud-starter-openfeign",
+        "external": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "type": "IN_ENV",
+      "from": "uat:a-service:service:a-service",
+      "to": "env:uat",
+      "props": {}
+    },
+    {
+      "type": "IN_ENV",
+      "from": "uat:a-service:deployment",
+      "to": "env:uat",
+      "props": {}
+    },
+    {
+      "type": "DEPLOYED_AS",
+      "from": "uat:a-service:service:a-service",
+      "to": "uat:a-service:deployment",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:service:a-service",
+      "to": "uat:a-service:module:com.example.a",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:service:a-service",
+      "to": "uat:a-service:module:com.example.a.controller",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:service:a-service",
+      "to": "uat:a-service:module:com.example.a.service",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:service:a-service",
+      "to": "uat:a-service:module:com.example.a.client",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:service:a-service",
+      "to": "uat:a-service:module:com.example.a.dto",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:module:com.example.a",
+      "to": "uat:a-service:component:com.example.a.AServiceApplication",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:component:com.example.a.AServiceApplication",
+      "to": "uat:a-service:operation:com.example.a.AServiceApplication#main",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:module:com.example.a.controller",
+      "to": "uat:a-service:component:com.example.a.controller.ItemProxyController",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:component:com.example.a.controller.ItemProxyController",
+      "to": "uat:a-service:operation:com.example.a.controller.ItemProxyController#getItem",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:module:com.example.a.service",
+      "to": "uat:a-service:component:com.example.a.service.ItemService",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:component:com.example.a.service.ItemService",
+      "to": "uat:a-service:operation:com.example.a.service.ItemService#getItem",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:module:com.example.a.client",
+      "to": "uat:a-service:component:com.example.a.client.BClient",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:component:com.example.a.client.BClient",
+      "to": "uat:a-service:operation:com.example.a.client.BClient#getItem",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:module:com.example.a.dto",
+      "to": "uat:a-service:component:com.example.a.dto.ItemDto",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:component:com.example.a.dto.ItemDto",
+      "to": "uat:a-service:member:com.example.a.dto.ItemDto#id",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:component:com.example.a.dto.ItemDto",
+      "to": "uat:a-service:member:com.example.a.dto.ItemDto#name",
+      "props": {}
+    },
+    {
+      "type": "EXPOSES",
+      "from": "uat:a-service:operation:com.example.a.controller.ItemProxyController#getItem",
+      "to": "uat:a-service:endpoint:http:GET /api/items/{id}",
+      "props": {}
+    },
+    {
+      "type": "SERVES",
+      "from": "uat:a-service:deployment",
+      "to": "uat:a-service:endpoint:http:GET /api/items/{id}",
+      "props": {}
+    },
+    {
+      "type": "PROVIDES_CAPABILITY",
+      "from": "uat:a-service:service:a-service",
+      "to": "uat:a-service:capability:item-lookup-proxy",
+      "props": {}
+    },
+    {
+      "type": "REALIZED_BY",
+      "from": "uat:a-service:capability:item-lookup-proxy",
+      "to": "uat:a-service:endpoint:http:GET /api/items/{id}",
+      "props": {}
+    },
+    {
+      "type": "CALLS",
+      "from": "uat:a-service:operation:com.example.a.controller.ItemProxyController#getItem",
+      "to": "uat:a-service:operation:com.example.a.service.ItemService#getItem",
+      "props": {
+        "dispatch": "static",
+        "lines": [
+          21
+        ],
+        "resolved": true
+      }
+    },
+    {
+      "type": "CALLS",
+      "from": "uat:a-service:operation:com.example.a.service.ItemService#getItem",
+      "to": "uat:a-service:operation:com.example.a.client.BClient#getItem",
+      "props": {
+        "dispatch": "interface",
+        "lines": [
+          19
+        ],
+        "resolved": true
+      }
+    },
+    {
+      "type": "MAKES_CALL",
+      "from": "uat:a-service:operation:com.example.a.client.BClient#getItem",
+      "to": "uat:a-service:clientcall:com.example.a.client.BClient#getItem->feign:GET /items/{id}",
+      "props": {
+        "line": 10
+      }
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:service:a-service",
+      "to": "uat:a-service:config:server.port",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:service:a-service",
+      "to": "uat:a-service:config:spring.application.name",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:service:a-service",
+      "to": "uat:a-service:config:b-service.url",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:a-service:service:a-service",
+      "to": "uat:a-service:config:spring.datasource.password",
+      "props": {}
+    },
+    {
+      "type": "USES_CONFIG",
+      "from": "uat:a-service:clientcall:com.example.a.client.BClient#getItem->feign:GET /items/{id}",
+      "to": "uat:a-service:config:b-service.url",
+      "props": {
+        "role": "base-url"
+      }
+    },
+    {
+      "type": "USES_CONFIG",
+      "from": "uat:a-service:deployment",
+      "to": "uat:a-service:config:server.port",
+      "props": {
+        "role": "port"
+      }
+    },
+    {
+      "type": "PROVIDES",
+      "from": "uat:a-service:component:com.example.a.controller.ItemProxyController",
+      "to": "uat:a-service:bean:itemProxyController",
+      "props": {
+        "via": "stereotype"
+      }
+    },
+    {
+      "type": "BEAN_TYPE",
+      "from": "uat:a-service:bean:itemProxyController",
+      "to": "uat:a-service:component:com.example.a.controller.ItemProxyController",
+      "props": {}
+    },
+    {
+      "type": "PROVIDES",
+      "from": "uat:a-service:component:com.example.a.service.ItemService",
+      "to": "uat:a-service:bean:itemService",
+      "props": {
+        "via": "stereotype"
+      }
+    },
+    {
+      "type": "BEAN_TYPE",
+      "from": "uat:a-service:bean:itemService",
+      "to": "uat:a-service:component:com.example.a.service.ItemService",
+      "props": {}
+    },
+    {
+      "type": "PROVIDES",
+      "from": "uat:a-service:component:com.example.a.client.BClient",
+      "to": "uat:a-service:bean:bClient",
+      "props": {
+        "via": "feign-client"
+      }
+    },
+    {
+      "type": "BEAN_TYPE",
+      "from": "uat:a-service:bean:bClient",
+      "to": "uat:a-service:component:com.example.a.client.BClient",
+      "props": {}
+    },
+    {
+      "type": "INJECTS",
+      "from": "uat:a-service:component:com.example.a.controller.ItemProxyController",
+      "to": "uat:a-service:bean:itemService",
+      "props": {
+        "via": "constructor"
+      }
+    },
+    {
+      "type": "INJECTS",
+      "from": "uat:a-service:component:com.example.a.service.ItemService",
+      "to": "uat:a-service:bean:bClient",
+      "props": {
+        "via": "constructor"
+      }
+    },
+    {
+      "type": "USES_TYPE",
+      "from": "uat:a-service:operation:com.example.a.controller.ItemProxyController#getItem",
+      "to": "uat:a-service:component:com.example.a.dto.ItemDto",
+      "props": {
+        "role": "return"
+      }
+    },
+    {
+      "type": "USES_TYPE",
+      "from": "uat:a-service:operation:com.example.a.service.ItemService#getItem",
+      "to": "uat:a-service:component:com.example.a.dto.ItemDto",
+      "props": {
+        "role": "return"
+      }
+    },
+    {
+      "type": "USES_TYPE",
+      "from": "uat:a-service:operation:com.example.a.client.BClient#getItem",
+      "to": "uat:a-service:component:com.example.a.dto.ItemDto",
+      "props": {
+        "role": "return"
+      }
+    },
+    {
+      "type": "TAGGED",
+      "from": "uat:a-service:component:com.example.a.AServiceApplication",
+      "to": "tag:java:org.springframework.boot.autoconfigure.SpringBootApplication",
+      "props": {}
+    },
+    {
+      "type": "TAGGED",
+      "from": "uat:a-service:component:com.example.a.AServiceApplication",
+      "to": "tag:java:org.springframework.cloud.openfeign.EnableFeignClients",
+      "props": {}
+    },
+    {
+      "type": "TAGGED",
+      "from": "uat:a-service:component:com.example.a.controller.ItemProxyController",
+      "to": "tag:java:org.springframework.web.bind.annotation.RestController",
+      "props": {}
+    },
+    {
+      "type": "TAGGED",
+      "from": "uat:a-service:component:com.example.a.controller.ItemProxyController",
+      "to": "tag:java:org.springframework.web.bind.annotation.RequestMapping",
+      "props": {
+        "attributes": {
+          "value": "/api/items"
+        }
+      }
+    },
+    {
+      "type": "TAGGED",
+      "from": "uat:a-service:operation:com.example.a.controller.ItemProxyController#getItem",
+      "to": "tag:java:org.springframework.web.bind.annotation.GetMapping",
+      "props": {
+        "attributes": {
+          "value": "/{id}"
+        }
+      }
+    },
+    {
+      "type": "TAGGED",
+      "from": "uat:a-service:component:com.example.a.service.ItemService",
+      "to": "tag:java:org.springframework.stereotype.Service",
+      "props": {}
+    },
+    {
+      "type": "TAGGED",
+      "from": "uat:a-service:component:com.example.a.client.BClient",
+      "to": "tag:java:org.springframework.cloud.openfeign.FeignClient",
+      "props": {
+        "attributes": {
+          "name": "b-service",
+          "url": "${b-service.url}"
+        }
+      }
+    },
+    {
+      "type": "TAGGED",
+      "from": "uat:a-service:operation:com.example.a.client.BClient#getItem",
+      "to": "tag:java:org.springframework.web.bind.annotation.GetMapping",
+      "props": {
+        "attributes": {
+          "value": "/items/{id}"
+        }
+      }
+    },
+    {
+      "type": "DEPENDS_ON",
+      "from": "uat:a-service:service:a-service",
+      "to": "lib:maven:org.springframework.boot:spring-boot-starter-web",
+      "props": {
+        "version": "3.3.5",
+        "scope": "compile",
+        "transitive": false,
+        "via": "pom.xml"
+      }
+    },
+    {
+      "type": "DEPENDS_ON",
+      "from": "uat:a-service:service:a-service",
+      "to": "lib:maven:org.springframework.cloud:spring-cloud-starter-openfeign",
+      "props": {
+        "version": "4.1.3",
+        "scope": "compile",
+        "transitive": false,
+        "via": "pom.xml"
+      }
+    }
+  ],
+  "gaps": [],
+  "diagnostics": []
+}

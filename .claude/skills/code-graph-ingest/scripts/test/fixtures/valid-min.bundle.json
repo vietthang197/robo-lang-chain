@@ -1,0 +1,106 @@
+{
+  "schemaVersion": "1.0",
+  "scan": {
+    "scanId": "uat-robo-lang-chain-20261109T101500Z",
+    "env": "uat",
+    "projectKey": "robo-lang-chain",
+    "repoPath": "D:/IdeaProjects/robo-lang-chain",
+    "branch": "uat",
+    "commitSha": "f2b3b30",
+    "readerProfiles": ["spring-boot"],
+    "scannedAt": "2026-11-09T10:15:00Z",
+    "coverage": { "filesTotal": 34, "filesRead": 34, "skipped": [] }
+  },
+  "nodes": [
+    {
+      "type": "Service",
+      "uid": "uat:robo-lang-chain:service:robo-lang-chain",
+      "props": {
+        "kind": "service",
+        "name": "robo-lang-chain",
+        "summary": "Service xử lý RAG tài liệu PDF và chat với LLM.",
+        "description": "Service nhận tài liệu PDF, tách đoạn và lưu embedding để phục vụ RAG.",
+        "evidence": ["src/main/java/com/thanglv/robolangchain/RoboLangChainApplication.java:1"],
+        "confidence": "high"
+      }
+    },
+    {
+      "type": "Deployment",
+      "uid": "uat:robo-lang-chain:deployment",
+      "props": { "kind": "deployment", "port": 8080, "hosts": ["10.1.2.3"], "branch": "uat" }
+    },
+    {
+      "type": "Component",
+      "uid": "uat:robo-lang-chain:component:com.thanglv.robolangchain.controller.DocumentRagController",
+      "props": {
+        "kind": "java-class",
+        "stereotype": "controller",
+        "name": "DocumentRagController",
+        "qualifiedName": "com.thanglv.robolangchain.controller.DocumentRagController",
+        "filePath": "src/main/java/com/thanglv/robolangchain/controller/DocumentRagController.java",
+        "description": "Controller nhận request REST để xử lý RAG cho tài liệu đã upload.",
+        "evidence": ["src/main/java/com/thanglv/robolangchain/controller/DocumentRagController.java:10"],
+        "confidence": "high"
+      }
+    },
+    {
+      "type": "Operation",
+      "uid": "uat:robo-lang-chain:operation:com.thanglv.robolangchain.controller.DocumentRagController#process",
+      "props": {
+        "kind": "java-method",
+        "name": "process",
+        "description": "Đọc tài liệu theo documentId, tách đoạn và lưu embedding vào vector store.",
+        "evidence": ["src/main/java/com/thanglv/robolangchain/controller/DocumentRagController.java:15"],
+        "confidence": "medium"
+      }
+    },
+    {
+      "type": "Endpoint",
+      "uid": "uat:robo-lang-chain:endpoint:http:GET /document/rag/process/{documentId}",
+      "props": {
+        "kind": "http",
+        "protocol": "http",
+        "httpMethod": "GET",
+        "path": "/document/rag/process/{documentId}",
+        "pathRegex": "^/document/rag/process/[^/]+$",
+        "description": "Kích hoạt xử lý RAG cho một tài liệu; trả về trạng thái xử lý.",
+        "evidence": ["src/main/java/com/thanglv/robolangchain/controller/DocumentRagController.java:15"],
+        "confidence": "high"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "type": "CONTAINS",
+      "from": "uat:robo-lang-chain:service:robo-lang-chain",
+      "to": "uat:robo-lang-chain:component:com.thanglv.robolangchain.controller.DocumentRagController",
+      "props": {}
+    },
+    {
+      "type": "CONTAINS",
+      "from": "uat:robo-lang-chain:component:com.thanglv.robolangchain.controller.DocumentRagController",
+      "to": "uat:robo-lang-chain:operation:com.thanglv.robolangchain.controller.DocumentRagController#process",
+      "props": {}
+    },
+    {
+      "type": "DEPLOYED_AS",
+      "from": "uat:robo-lang-chain:service:robo-lang-chain",
+      "to": "uat:robo-lang-chain:deployment",
+      "props": {}
+    },
+    {
+      "type": "EXPOSES",
+      "from": "uat:robo-lang-chain:operation:com.thanglv.robolangchain.controller.DocumentRagController#process",
+      "to": "uat:robo-lang-chain:endpoint:http:GET /document/rag/process/{documentId}",
+      "props": {}
+    },
+    {
+      "type": "SERVES",
+      "from": "uat:robo-lang-chain:deployment",
+      "to": "uat:robo-lang-chain:endpoint:http:GET /document/rag/process/{documentId}",
+      "props": {}
+    }
+  ],
+  "gaps": [],
+  "diagnostics": []
+}
