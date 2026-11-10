@@ -190,8 +190,12 @@ export function studioQueries(env) {
         'OPTIONAL MATCH (c:Component)-[:CONTAINS]->(op)',
         'WITH ep, op, [x IN [op, c] WHERE x IS NOT NULL] AS starts',
         'UNWIND starts AS s',
-        'MATCH p = (s)-[:CALLS|TRIGGERS*0..4]->(n:CodeNode)-[:ACCESSES]->(ds:DataStore)',
-        'RETURN ep, op, p LIMIT 200',
+        // Interface dispatch (spring-boot §4.5): CALLS stops at the interface Operation; the
+        // implementation reaches it by OVERRIDES, so hop back once and continue from there.
+        'MATCH p1 = (s)-[:CALLS|TRIGGERS*0..4]->(m:CodeNode)',
+        'MATCH p2 = (m)<-[:OVERRIDES*0..1]-(i:CodeNode)',
+        'MATCH p3 = (i)-[:CALLS|TRIGGERS*0..4]->(n:CodeNode)-[:ACCESSES]->(ds:DataStore)',
+        'RETURN ep, op, p1, p2, p3 LIMIT 200',
       ]),
     },
     {
