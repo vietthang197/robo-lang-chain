@@ -186,6 +186,14 @@ export function validateBundle(bundle, options = {}) {
     for (const e of edges.filter((x) => !isDerived(x)))
       for (const end of ['from', 'to'])
         if (!resolvable(e[end])) err('R3-dangling', `${e.type} ${end} ${e[end]} is not in the bundle`, e[end]);
+    // The edge batch MATCHes both ends: a shared endpoint that is neither in the bundle nor already
+    // in the DB makes the edge silently disappear (990-count edges < expectEdges).
+    const missingShared = new Set();
+    for (const e of edges.filter((x) => !isDerived(x)))
+      for (const end of ['from', 'to'])
+        if (!byUid.has(e[end]) && isShared(e[end]) && !e[end].startsWith('gap:')) missingShared.add(e[end]);
+    for (const uid of [...missingShared].sort())
+      warn('W-shared-endpoint-missing', 'shared node used by an edge is not in the bundle; the edge is skipped unless the node already exists in the DB', uid);
   }
 
   if (!link) {

@@ -138,6 +138,7 @@ Gap trong bundle ingest luôn dùng `gap:<env>:<projectKey>:…` (**ruling R12**
 | `R4-service-deployment` | đúng 1 `Service` và 1 `Deployment` |
 | `R5-service-surface` / `R5-clientcall-url` | Service có ≥1 Endpoint/Channel/Gap; ClientCall có `urlTemplate` hoặc `HAS_GAP` |
 | `R6-description-evidence` / `R6-required-description` | có `description` thì phải có `evidence[]` + `confidence`; Component `controller`/`service`, Endpoint, Capability (không external) bắt buộc có description |
+| `W-shared-endpoint-missing` | (cảnh báo) cạnh trỏ tới node dùng chung không có trong bundle: cạnh bị bỏ qua nếu node chưa có trong DB |
 | `R7-secret` | không chuỗi nào khớp mẫu secret (URL có userinfo, Oracle thin `USER/PASS@`, JWT, PEM, `password=…`, AWS key, `Bearer <token>`, `sk-…`/`ghp_…`/`xoxb-…`) |
 | `R7-config-default` | ConfigKey có key credential (`CREDENTIAL_KEY`, xem `config-and-env.md` §4): default trong `placeholderExpr` phải là `***`, rỗng hoặc placeholder khác; `defaultValue` bỏ hoặc `***` |
 | `R7-config-value` | ConfigKey có key credential: `value` chỉ được là null, `""`, `***` (kèm `masked:true`), `${VAR}` hoặc `${VAR:***}` (`value: "Hunter2024"` là fail dù mẫu secret không nhận ra); key `url`/`uri`: `value` phải đã che sẵn (bằng kết quả `maskConfigValue`) |
@@ -154,6 +155,8 @@ node <skill>/scripts/bundle-to-cypher.mjs bundle.json load-batches            # 
 - Lệnh ghi `load-batches/NNN-*.cypher` và `plan.json` (`[{file, language, expectNodes?}]`). Gửi từng file **theo đúng thứ tự trong `plan.json`** qua MCP ArcadeDB (`language` = `sqlscript` cho `000-schema`, `cypher` cho phần còn lại).
 - Mỗi lô ≤ 300 dòng **và** ≤ 200 000 ký tự Cypher (script tự chia).
 - Kết quả `990-count` phải bằng `expectNodes` trong `plan.json` (số node thuộc project, **gồm cả Gap của project**), **không** so với tổng số node của bundle (bundle còn chứa node dùng chung `ext:`/`lib:`/`tag:`/`ds:`/`env:`… không mang projectKey).
+- `990-count` (ingest) trả `nodes` và `edges`; `edges` phải bằng `expectEdges` (số cạnh khác nhau `(type, from, to)` đi ra từ node thuộc project của bundle, đếm theo `scanId`). Lô cạnh `MATCH` hai đầu nên cạnh có đầu mút không tồn tại bị **bỏ qua im lặng**: node dùng chung mà cạnh trỏ tới nhưng không có trong bundle được validator báo `W-shared-endpoint-missing`.
+- Nhóm dòng node: node project gộp theo nhãn; node dùng chung (`ds:`, `ext:`, `lib:`, `tag:`, `ch:`, `sys:`…) gộp theo nhãn **và tập key**, để một dòng thiếu key không ghi `null` đè giá trị project khác đã ghi.
 - Trong DB, prop dạng map và list-of-map (`Service.coverage`, `Gap.candidates`, `TAGGED.attributes`, …) là **chuỗi JSON** (ArcadeDB không nhận map); đọc ra thì parse lại (`schema.md` §3). Bundle vẫn ghi chúng dạng object.
 - Lô nào lỗi thì dừng, **không** chạy cleanup; chạy lại tiếp từ lô lỗi.
 - Uid `ext:` phải cùng loại vertex ở mọi project (xem `schema.md` §2.1), nếu không unique index từ chối cả lô.

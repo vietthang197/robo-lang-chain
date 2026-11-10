@@ -84,7 +84,8 @@ test('cleanup is scoped', () => {
     assert.ok(p.statement.includes("projectKey:'svc'"), p.file);
   }
   const count = plan.find((p) => p.file === '990-count').statement;
-  assert.equal(count, "MATCH (n:CodeNode {env:'uat', projectKey:'svc'}) RETURN count(n) AS nodes");
+  assert.ok(count.startsWith("MATCH (n:CodeNode {env:'uat', projectKey:'svc'}) WITH count(n) AS nodes "), count);
+  assert.ok(count.includes("OPTIONAL MATCH (a:CodeNode {env:'uat', projectKey:'svc'})-[e]->()"), count);
 });
 
 test('ingest rows carry scan fields; shared rows never get projectKey', () => {
@@ -287,4 +288,40 @@ test('map props and lists of maps are stored as JSON strings (ArcadeDB has no ma
   // Row literals start after "[" or ", "; a map assigned to a property would read "key: {".
   assert.ok(!/\w: \{/.test(all), 'no map literal is assigned as a property value');
   assert.ok(all.includes(`attributes: '{"value":"/x"}'`));
+});
+
+test('ingest: shared rows with different key sets never SET a key they lack (no nulling)', () => {
+  const full = { type: 'DataStore', uid: 'ds:uat:mongodb:db.a', props: { tech: 'mongodb', location: 'db1:27017' } };
+  const thin = { type: 'DataStore', uid: 'ds:uat:mongodb:db.b', props: { tech: 'mongodb' } };
+  const lib1 = { type: 'Library', uid: 'lib:maven:g:a', props: { name: 'a', version: '1.0' } };
+  const lib2 = { type: 'Library', uid: 'lib:maven:g:b', props: { name: 'b' } };
+  const plan = toLoadPlan(bundle([op(1), op(2, { description: 'x', descriptionSource: 'ai' }), full, thin, lib1, lib2]), { mode: 'ingest' });
+  for (const p of plan.filter((x) => /nodes-(DataStore|Library)$/.test(x.file))) {
+    const sets = [...p.statement.matchAll(/n\.(\w+) = r\.\1/g)].map((m) => m[1]);
+    const rows = p.statement.slice(p.statement.indexOf('[') + 1, p.statement.indexOf('] AS r'));
+    const rowCount = (rows.match(/\{uid: /g) ?? []).length;
+    for (const k of sets)
+      assert.equal((rows.match(new RegExp(`\\b${k}: `, 'g')) ?? []).length, rowCount, `${p.file} sets ${k} for a row lacking it`);
+  }
+  assert.ok(!plan.some((p) => p.file.endsWith('nodes-DataStore') && p.statement.includes('db.b') && p.statement.includes('n.location')));
+  // project rows keep one batch per label (union of keys)
+  assert.equal(plan.filter((p) => p.file.endsWith('nodes-Operation')).length, 1);
+});
+
+test('990-count also counts edges from project nodes; plan carries expectEdges', () => {
+  const ds = { type: 'DataStore', uid: 'ds:uat:mongodb:db.a', props: { tech: 'mongodb' } };
+  const edges = [
+    { type: 'CALLS', from: op(1).uid, to: op(2).uid },
+    { type: 'CALLS', from: op(1).uid, to: op(2).uid }, // duplicate merges into one
+    { type: 'ACCESSES', from: op(2).uid, to: ds.uid, props: { mode: 'read' } },
+    { type: 'TAGGED', from: ds.uid, to: 'tag:x:y' }, // from a shared node: not counted
+  ];
+  const plan = toLoadPlan(bundle([op(1), op(2), ds], edges), { mode: 'ingest' });
+  const count = plan.find((p) => p.file === '990-count');
+  assert.equal(count.expectNodes, 2);
+  assert.equal(count.expectEdges, 2);
+  assert.equal(count.statement,
+    "MATCH (n:CodeNode {env:'uat', projectKey:'svc'}) WITH count(n) AS nodes " +
+    "OPTIONAL MATCH (a:CodeNode {env:'uat', projectKey:'svc'})-[e]->() WHERE e.scanId = 'uat-svc-20261109T101500Z' " +
+    'RETURN nodes, count(e) AS edges');
 });

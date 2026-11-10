@@ -228,3 +228,13 @@ test('R3-derived-in-ingest: derived edges belong to link bundles only', () => {
   };
   assert.deepEqual(validateBundle(link).errors, []);
 });
+
+test('W-shared-endpoint-missing: a shared edge endpoint absent from the bundle is a warning', () => {
+  const b = load();
+  b.edges.push({ type: 'DEPENDS_ON', from: SVC, to: 'lib:maven:g:missing' });
+  const r = validateBundle(b);
+  assert.deepEqual(r.errors, []);
+  assert.ok(r.warnings.some((w) => w.rule === 'W-shared-endpoint-missing' && w.uid === 'lib:maven:g:missing'));
+  b.nodes.push({ type: 'Library', uid: 'lib:maven:g:missing', props: { name: 'missing' } });
+  assert.ok(!validateBundle(b).warnings.some((w) => w.rule === 'W-shared-endpoint-missing'));
+});

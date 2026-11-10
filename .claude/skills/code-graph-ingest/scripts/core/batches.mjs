@@ -146,7 +146,9 @@ export function toLoadPlan(bundle, { mode = 'ingest' } = {}) {
   const sid = lit(scan.scanId);
   const plan = [{ file: '000-schema', language: 'sqlscript', statement: schemaStatements().join(';\n') + ';' }];
 
-  // Nodes: grouped by label; link mode also by key set, so patches never null each other's props.
+  // Nodes: grouped by label. Link patches and shared rows (ds:, ext:, lib:, tag:, ch:, sys:, …) are
+  // also grouped by key set, so a row only SETs the keys it carries: a shared row lacking a key must
+  // never null what another project wrote. Project rows keep one group per label (union of keys).
   const groups = new Map();
   let expectNodes = 0;
   for (const node of bundle.nodes ?? []) {
@@ -156,7 +158,7 @@ export function toLoadPlan(bundle, { mode = 'ingest' } = {}) {
     if (patch && keys.length === 0) continue;
     // ingest counts rows stamped with projectKey; link counts rows stamped with its scanId.
     if (!patch && (mode === 'link' || !shared)) expectNodes++;
-    const sig = mode === 'link' ? `${node.type}|${patch}|${[...keys].sort().join(',')}` : node.type;
+    const sig = mode === 'link' || shared ? `${node.type}|${patch}|${shared}|${[...keys].sort().join(',')}` : node.type;
     if (!groups.has(sig)) groups.set(sig, { type: node.type, patch, items: [] });
     groups.get(sig).items.push({ lit: lit(row), keys });
   }
@@ -174,7 +176,14 @@ export function toLoadPlan(bundle, { mode = 'ingest' } = {}) {
     });
 
   const edgeGroups = new Map();
+  // Edge batches MATCH both ends and silently skip an edge whose endpoint is missing, so 990-count
+  // also counts the edges leaving project nodes: expectEdges = distinct (type, from, to) edges
+  // whose from is a project-scoped node of this bundle.
+  const projectUids = new Set((bundle.nodes ?? [])
+    .filter((n) => !(isShared(n.uid) && !isProjectGap(n.uid, scan, mode))).map((n) => n.uid));
+  const countedEdges = new Set();
   for (const edge of bundle.edges ?? []) {
+    if (projectUids.has(edge.from)) countedEdges.add(`${edge.type} ${edge.from} ${edge.to}`);
     if (!EDGE_TYPES.includes(edge.type)) throw new Error(`edge ${edge.from} -> ${edge.to}: unknown type ${edge.type}`);
     const { row, keys } = edgeRow(edge, scan);
     if (!edgeGroups.has(edge.type)) edgeGroups.set(edge.type, []);
@@ -195,8 +204,11 @@ export function toLoadPlan(bundle, { mode = 'ingest' } = {}) {
     plan.push({
       file: '990-count',
       language: 'cypher',
-      statement: `MATCH (n:CodeNode {env:${env}, projectKey:${pk}}) RETURN count(n) AS nodes`,
+      statement: `MATCH (n:CodeNode {env:${env}, projectKey:${pk}}) WITH count(n) AS nodes ` +
+        `OPTIONAL MATCH (a:CodeNode {env:${env}, projectKey:${pk}})-[e]->() WHERE e.scanId = ${sid} ` +
+        'RETURN nodes, count(e) AS edges',
       expectNodes,
+      expectEdges: countedEdges.size,
     });
   } else {
     const gapPrefix = lit(`gap:${scan.env}:system:`);

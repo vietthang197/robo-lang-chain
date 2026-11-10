@@ -45,7 +45,11 @@ try {
   for (const p of plan) writeFileSync(join(args.outDir, `${p.file}.cypher`), p.statement + '\n', 'utf8');
   writeJson(
     join(args.outDir, 'plan.json'),
-    plan.map(({ file, language, expectNodes }) => ({ file: `${file}.cypher`, language, ...(expectNodes !== undefined && { expectNodes }) })),
+    plan.map(({ file, language, expectNodes, expectEdges }) => ({
+      file: `${file}.cypher`, language,
+      ...(expectNodes !== undefined && { expectNodes }),
+      ...(expectEdges !== undefined && { expectEdges }),
+    })),
   );
   console.log(`${plan.length} statement file(s) -> ${args.outDir} (mode ${args.mode})`);
 } catch (e) {
