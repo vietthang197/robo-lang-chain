@@ -174,7 +174,7 @@ Khi `inventory.json` có **hơn 150 file**: agent chính làm Pha 1 và đọc c
 - danh sách file của module (đường dẫn tuyệt đối trong `<ws>/src`) và khối `scan` (scanId, env, projectKey, repoPath, branch, commitSha, readerProfiles);
 - đường dẫn profile (`references/readers/<profile>.md`), `references/schema.md` (công thức uid §2 và quy tắc §2.1), `references/bundle-format.md`, `references/cross-service.md` §1, `references/describe-guide.md` (để mô tả Operation/Component/Endpoint của module);
 - bảng ConfigKey đã giải và che secret (Spring) hoặc bảng hook + bảng tên EB.API (T24, theo mục 2 của t24.md);
-- đường dẫn đầu ra `<ws>/bundle.part-<module>.json` và yêu cầu: `CALLS` sang module khác dùng **uid dự kiến** theo công thức; không tạo Service/Deployment/ConfigKey (đã ở `_root`); tuân thủ mục "Quy tắc bắt buộc" (chép nguyên văn quy tắc 1-3, 6, 11-12 vào prompt); **không nạp DB, không ghi file nào khác**.
+- đường dẫn đầu ra `<ws>/bundle.part-<module>.json` và yêu cầu: `CALLS` sang module khác dùng **uid dự kiến** theo công thức; không tạo Service/Deployment/ConfigKey (đã ở `_root`); tuân thủ mục "Quy tắc bắt buộc" (chép nguyên văn quy tắc 1-6, 8, 10-13 vào prompt: không secret, không bịa, evidence/confidence, không ghi đè mô tả human, không sửa repo, ruling R16 context-path, ruling R12 uid Gap, OFS, uid, không `TARGETS`/rollup trong ingest); **không nạp DB, không ghi file nào khác**.
 
 Agent chính chỉ gộp (Pha 6) và làm Pha 5 ở tầng Capability/Service. Repo ≤ 150 file: agent chính tự làm, có thể ghi tất cả vào một part `bundle.part-_root.json`.
 
@@ -212,15 +212,15 @@ node scripts/diff-bundle.mjs <ws>/bundle.prev.json <ws>/bundle.json <ws>/diff.md
    cd <skill>
    node scripts/bundle-to-cypher.mjs <ws>/bundle.json <ws>/load-batches
    ```
-   Lệnh ghi `load-batches/NNN-*.cypher` và `load-batches/plan.json` (`[{file, language, expectNodes?}]`); nó từ chối bundle không hợp lệ.
+   Lệnh ghi `load-batches/NNN-*.cypher` và `load-batches/plan.json` (`[{file, language, expectNodes?, expectEdges?}]`); nó từ chối bundle không hợp lệ.
 2. Ghi `<ws>/load-state.json`: `{ "scanId": "<scanId>", "batchesDir": "<ws>/load-batches", "status": "loading", "nextFile": "000-schema.cypher", "failedFile": null, "error": null }`.
 3. Gửi từng mục của `plan.json` **theo đúng thứ tự**, bắt đầu từ `nextFile`: đọc nội dung file, gọi `mcp__arcadedb__execute_command` với `database: "CodeGraph"`, `language` = `language` của mục (`sqlscript` cho `000-schema.cypher`, `cypher` cho phần còn lại), `command` = nội dung file. Thành công thì cập nhật `nextFile` sang mục kế tiếp.
 4. **Lô lỗi:** dừng ngay; ghi `status: "failed"`, `failedFile: "<file>"`, `error` (thông báo lỗi, không có secret) vào `load-state.json`; báo người dùng. **Không** gửi các file sau, đặc biệt **không chạy `900-cleanup`**. Lần chạy sau tiếp tục từ `failedFile` (gửi lại các file node/edge trước đó cũng vô hại vì đều `MERGE`).
-5. `990-count`: lấy `nodes` trả về, so với `expectNodes` của mục đó trong `plan.json` (**không** so với tổng node của bundle, vì bundle còn node dùng chung). Lệch thì `status: "count-mismatch"`, báo người dùng hai con số, không coi là thành công.
-6. Khớp: `status: "done"`. Báo người dùng số node đã nạp, số Gap mở, đường dẫn `diff.md` và `catalog-proposal.yaml`.
+5. `990-count`: lấy `nodes` và `edges` trả về, so `nodes` với `expectNodes` và `edges` với `expectEdges` của mục đó trong `plan.json` (**không** so với tổng node/cạnh của bundle, vì bundle còn node dùng chung và cạnh đi ra từ node dùng chung). `edges` < `expectEdges` nghĩa là lô cạnh đã bỏ qua cạnh có đầu mút không tồn tại (thường là node dùng chung báo `W-shared-endpoint-missing` lúc validate). Lệch bất kỳ con số nào: ghi `status: "count-mismatch"`; **không chạy lại cleanup** (`900-cleanup`) hay lô nào khác; chạy lại `990-count` một lần; vẫn lệch thì báo người dùng cả bốn con số (`nodes`/`expectNodes`, `edges`/`expectEdges`) kèm các cảnh báo `W-shared-endpoint-missing`, rồi **dừng**, không coi là thành công.
+6. Khớp cả hai: `status: "done"`. Báo người dùng số node và cạnh đã nạp, số Gap mở, đường dẫn `diff.md` và `catalog-proposal.yaml`.
 7. **Luôn nhắc:** "Ingest lại xoá các cạnh đi ra từ node của project (kể cả `TARGETS`). Hãy chạy `link --env <env>` ngay bây giờ."
 
-**Qua pha khi:** `990-count` = `expectNodes`; `load-state.json` `status: "done"`.
+**Qua pha khi:** `990-count` cho `nodes` = `expectNodes` và `edges` = `expectEdges`; `load-state.json` `status: "done"`.
 
 ---
 
@@ -287,4 +287,4 @@ Ingest không bao giờ xoá node dùng chung (`ext:`, `lib:`, `tag:`, `ds:`, `c
 | Validate fail | Sửa bundle, validate lại; không nạp |
 | Lô nạp lỗi | Dừng, ghi `load-state.json`, không cleanup; lần sau tiếp từ `failedFile` |
 | MCP ArcadeDB không kết nối được | Dừng ở Pha 7 (hoặc ở `link`/`report`); bundle còn nguyên |
-| `990-count` lệch `expectNodes` | Báo người dùng hai con số; không báo thành công |
+| `990-count` lệch `expectNodes`/`expectEdges` | `status: "count-mismatch"`; không chạy lại cleanup; chạy lại `990-count` một lần; vẫn lệch thì báo người dùng các con số và dừng |

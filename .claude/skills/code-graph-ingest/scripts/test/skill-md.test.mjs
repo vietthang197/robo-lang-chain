@@ -49,3 +49,18 @@ test('skill has the three command sections and phases 0-7', () => {
   for (const h of ['ingest', 'link', 'report']) assert.match(text, new RegExp(`^## ${h}\\b`, 'm'), `missing heading ## ${h}`);
   for (let i = 0; i <= 7; i++) assert.match(text, new RegExp(`^#+ .*Pha ${i}\\b`, 'm'), `missing phase heading Pha ${i}`);
 });
+
+test('large-repo subagent prompt copies rules 1-6, 8, 10-13', () => {
+  const text = load();
+  const section = text.slice(text.indexOf('### Repo lớn'), text.indexOf('### Pha 5'));
+  assert.match(section, /quy tắc 1-6, 8, 10-13/);
+});
+
+test('Pha 7 compares nodes and edges of 990-count and says what to do on mismatch', () => {
+  const text = load();
+  const section = text.slice(text.indexOf('### Pha 7'), text.indexOf('## link'));
+  assert.match(section, /expectEdges/);
+  assert.match(section, /count-mismatch/);
+  assert.match(section, /không chạy lại cleanup/i);
+  assert.match(section, /chạy lại `990-count` một lần/);
+});
